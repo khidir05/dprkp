@@ -1,0 +1,11 @@
+- Dilarang menggunakan ‘any’ pada typescript atau javascript, gunakan tipe yang spesifik.
+- Dilarang mengabaikan keamanan data pengguna.
+- Jangan mengubah kode di luar scope masalah, Hanya ubah file dan fungsi yang relevan dengan masalah yang diminta.
+- Jangan melakukan refactor tanpa diminta, Fokus pada bug fix. Refactor hanya jika diminta atau benar-benar diperlukan.
+- Jangan menghapus kode yang belum dipahami, kecuali sudah dipastikan tidak digunakan
+- Jangan membuat solusi yang terlalu kompleks, Pilih solusi paling sederhana yang menyelesaikan masalah.
+- Jangan membuat asumsi tentang struktur data.
+- Jangan menambahkan dependency baru jika bisa memakai yang sudah ada.
+- Jangan mengabaikan pola yang sudah digunakan project, konsisten dengan yang ada.
+- Jangan membaca atau memodifikasi seluruh codebase untuk masalah lokal, Mulai dari file yang terkait langsung dengan error. Perluas pencarian hanya jika ditemukan dependency yang relevan.
+- Jangan mengerjakan sesuatu yang ada di dalam file unpriority task
