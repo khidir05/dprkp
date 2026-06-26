@@ -17,6 +17,6 @@ Catatan yang berisi fitur dan hak akses masing masing role di dalam sistem aplik
 ### 3. DOKUMEN FLOW SISTEM INVENTARIS & PERMINTAAN BARANG.md
 Catatan yang berisi alur sistem ini secara kesuluruhan berdasarkan fitur dan role
 ### 4. DOKUMEN PROSEDUR OPERASIONAL SISTEM INVENTARIS & PERMINTAAN BARANG.md
-Catatn yang berisi tentang prosedur yang dilakukan oleh user di dalam sistem saat penggunaannya nanti.
+Catatan yang berisi tentang prosedur yang dilakukan oleh user di dalam sistem saat penggunaannya nanti. Catatan disini juga menjadi langkah urutan yang harus dikerjakan
 ### 5. UNPRIORITY TASK
 Unpriority Task adalah kumpulan task dan fitur yang belum perlu terlebih dahulu dilakukan guna menghemat penggunaan token, memaksimalkan pekerjaan lainnya dan memininalisir waktu pengerjaan.

@@ -9,3 +9,4 @@
 - Jangan mengabaikan pola yang sudah digunakan project, konsisten dengan yang ada.
 - Jangan membaca atau memodifikasi seluruh codebase untuk masalah lokal, Mulai dari file yang terkait langsung dengan error. Perluas pencarian hanya jika ditemukan dependency yang relevan.
 - Jangan mengerjakan sesuatu yang ada di dalam file unpriority task
+- Jangan mengganggu folder migrasi, karena folder migrasi adalah struktur utama database
