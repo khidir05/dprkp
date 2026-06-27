@@ -75,4 +75,12 @@ class Product extends Model
     {
         return $this->hasMany(StockMutation::class);
     }
+
+    /**
+     * @return HasMany<StockOpnameItem, $this>
+     */
+    public function stockOpnameItems(): HasMany
+    {
+        return $this->hasMany(StockOpnameItem::class);
+    }
 }

@@ -13,8 +13,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
-use Laravel\Fortify\Contracts\PasskeyUser;
-use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 
 /**
@@ -37,10 +35,10 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  */
 #[Fillable(['role', 'name', 'email', 'phone', 'code_user', 'username', 'password', 'is_active'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
-class User extends Authenticatable implements PasskeyUser
+class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
+    use HasFactory, Notifiable, TwoFactorAuthenticatable;
 
     /**
      * Get the attributes that should be cast.
@@ -138,5 +136,21 @@ class User extends Authenticatable implements PasskeyUser
     public function isPemohon(): bool
     {
         return $this->roleModel?->code === 'pemohon';
+    }
+
+    /**
+     * @return HasMany<StockOpname, $this>
+     */
+    public function createdStockOpnames(): HasMany
+    {
+        return $this->hasMany(StockOpname::class, 'created_by');
+    }
+
+    /**
+     * @return HasMany<StockOpname, $this>
+     */
+    public function approvedStockOpnames(): HasMany
+    {
+        return $this->hasMany(StockOpname::class, 'approved_by');
     }
 }

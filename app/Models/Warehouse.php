@@ -53,4 +53,12 @@ class Warehouse extends Model
     {
         return $this->hasMany(InboundTransaction::class);
     }
+
+    /**
+     * @return HasMany<StockOpname, $this>
+     */
+    public function stockOpnames(): HasMany
+    {
+        return $this->hasMany(StockOpname::class);
+    }
 }

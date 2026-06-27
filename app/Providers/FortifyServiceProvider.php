@@ -67,9 +67,27 @@ class FortifyServiceProvider extends ServiceProvider
             'status' => $request->session()->get('status'),
         ]));
 
-        Fortify::registerView(fn () => Inertia::render('auth/register', [
-            'passwordRules' => Password::defaults()->toPasswordRulesString(),
-        ]));
+        Fortify::registerView(function (Request $request) {
+            $token = $request->query('token');
+            $registrationLink = null;
+
+            if ($token) {
+                $registrationLink = \App\Models\RegistrationLink::where('token', $token)
+                    ->where('is_used', false)
+                    ->where('expires_at', '>', now())
+                    ->first();
+            }
+
+            if (! $registrationLink) {
+                return redirect()->route('login')->with('error', 'Registrasi memerlukan link pendaftaran yang valid dan aktif.');
+            }
+
+            return Inertia::render('auth/register', [
+                'passwordRules' => Password::defaults()->toPasswordRulesString(),
+                'token' => $token,
+                'roleName' => $registrationLink->role->nama,
+            ]);
+        });
 
         Fortify::twoFactorChallengeView(fn () => Inertia::render('auth/two-factor-challenge'));
 
