@@ -21,7 +21,7 @@ class UserManagementController extends Controller
     {
         $this->authorizeAdmin($request);
 
-        $query = User::query()->with('roleModel');
+        $query = User::query()->with(['roleModel', 'warehouses']);
 
         if ($request->has('search')) {
             $search = $request->input('search');

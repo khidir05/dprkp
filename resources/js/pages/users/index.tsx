@@ -9,11 +9,19 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Edit2, ToggleLeft, ToggleRight, UserPlus, Link2 } from 'lucide-react';
-import type { User, Role } from '@/types';
+import type { User, Role, Warehouse } from '@/types';
+
+type ManageableUser = User & {
+    code_user?: string | null;
+    username?: string | null;
+    phone?: string | null;
+    role_model?: Role;
+    warehouses?: Warehouse[];
+};
 
 type Props = {
     users: {
-        data: User[];
+        data: ManageableUser[];
         links: any[];
     };
     roles: Role[];
@@ -148,8 +156,8 @@ export default function UsersIndex({ users, roles, filters }: Props) {
                     </div>
                 </div>
 
-                <DataTable
-                    headers={['Kode User', 'Nama Petugas', 'Username', 'Email & Telp', 'Role', 'Status', 'Aksi']}
+                <DataTable<ManageableUser>
+                    headers={['Kode User', 'Nama Petugas', 'Username', 'Email & Telp', 'Role', 'Gudang Akses', 'Status', 'Aksi']}
                     items={users.data}
                     searchQuery={search}
                     onSearchChange={handleSearchChange}
@@ -170,6 +178,19 @@ export default function UsersIndex({ users, roles, filters }: Props) {
                                 <Badge variant="outline" className="font-semibold text-xs">
                                     {user.role_model?.nama || '-'}
                                 </Badge>
+                            </td>
+                            <td className="p-4">
+                                <div className="flex flex-wrap gap-1 max-w-[180px]">
+                                    {user.warehouses && user.warehouses.length > 0 ? (
+                                        user.warehouses.map((wh) => (
+                                            <Badge key={wh.id} variant="secondary" className="text-[10px] px-1.5 py-0.5 whitespace-nowrap">
+                                                {wh.name}
+                                            </Badge>
+                                        ))
+                                    ) : (
+                                        <span className="text-xs text-muted-foreground">-</span>
+                                    )}
+                                </div>
                             </td>
                             <td className="p-4">
                                 <Badge variant={user.is_active ? 'default' : 'secondary'}>
