@@ -18,7 +18,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $notes
  * @property Carbon|null $created_at
  */
-#[Fillable(['product_id', 'current_stock', 'minimum_stock', 'status', 'handled_by', 'handled_at', 'notes'])]
+#[Fillable(['product_id', 'warehouse_id', 'current_stock', 'minimum_stock', 'status', 'handled_by', 'handled_at', 'notes'])]
 class StockAlert extends Model
 {
     public const UPDATED_AT = null;
@@ -41,6 +41,14 @@ class StockAlert extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    /**
+     * @return BelongsTo<Warehouse, $this>
+     */
+    public function warehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class);
     }
 
     /**

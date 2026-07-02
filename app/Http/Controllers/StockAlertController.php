@@ -1,51 +1,74 @@
 <?php
-
-namespace App\Http\Controllers;
-
-use App\Models\StockAlert;
-use App\Models\Product;
-use App\Models\Stock;
-use App\Models\RestockList;
-use Illuminate\Http\Request;
-use Inertia\Inertia;
-use Inertia\Response;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\DB;
-
-class StockAlertController extends Controller
-{
-    /**
-     * Display a listing of stock alerts.
-     */
-    public function index(Request $request): Response
-    {
-        $user = $request->user();
-        if ($user->roleModel->code === 'pemohon') {
-            abort(403, 'Akses ditolak.');
-        }
-
-        // 1. Auto-detect stock alerts before showing the list
-        $this->detectStockAlerts();
-
-        $query = StockAlert::query()->with(['product.unit', 'handler']);
-
-        if ($request->has('status') && $request->input('status') !== 'all') {
-            $query->where('status', $request->input('status'));
-        } else {
-            // Default to active alerts (open, restock, hold)
-            $query->whereIn('status', ['open', 'restock', 'hold']);
-        }
-
-        $alerts = $query->orderByDesc('created_at')
-            ->paginate(15)
-            ->withQueryString();
-
-        return Inertia::render('alerts/index', [
-            'alerts' => $alerts,
-            'filters' => $request->only(['status']),
-            'role' => $user->roleModel->code,
-        ]);
-    }
+ 
+ namespace App\Http\Controllers;
+ 
+ use App\Models\StockAlert;
+ use App\Models\Product;
+ use App\Models\Stock;
+ use App\Models\RestockList;
+ use App\Models\Warehouse;
+ use Illuminate\Http\Request;
+ use Inertia\Inertia;
+ use Inertia\Response;
+ use Illuminate\Http\RedirectResponse;
+ use Illuminate\Support\Facades\DB;
+ 
+ class StockAlertController extends Controller
+ {
+     /**
+      * Display a listing of stock alerts.
+      */
+     public function index(Request $request): Response
+     {
+         $user = $request->user();
+         if ($user->roleModel->code === 'pemohon') {
+             abort(403, 'Akses ditolak.');
+         }
+ 
+         // 1. Auto-detect stock alerts before showing the list
+         $this->detectStockAlerts();
+ 
+         $query = StockAlert::query()->with(['product.unit', 'warehouse', 'handler']);
+ 
+         // Filter by status
+         if ($request->has('status') && $request->input('status') !== 'all') {
+             if ($request->input('status') === 'active') {
+                 $query->whereIn('status', ['open', 'restock', 'hold']);
+             } else {
+                 $query->where('status', $request->input('status'));
+             }
+         } else {
+             // Default to active alerts (open, restock, hold)
+             $query->whereIn('status', ['open', 'restock', 'hold']);
+         }
+ 
+         // Role-based warehouse filtering for Admin Gudang
+         $isGudang = $user->roleModel->code === 'admin_gudang';
+         $assignedWarehouseIds = $isGudang ? $user->warehouses()->pluck('warehouses.id') : collect([]);
+ 
+         if ($isGudang) {
+             $query->whereIn('warehouse_id', $assignedWarehouseIds);
+             $warehouses = $user->warehouses()->where('is_active', true)->get(['warehouses.id', 'warehouses.name']);
+         } else {
+             $warehouses = Warehouse::where('is_active', true)->get(['id', 'name']);
+         }
+ 
+         // Filter by warehouse
+         if ($request->has('warehouse_id') && $request->input('warehouse_id') !== 'all') {
+             $query->where('warehouse_id', $request->input('warehouse_id'));
+         }
+ 
+         $alerts = $query->orderByDesc('created_at')
+             ->paginate(15)
+             ->withQueryString();
+ 
+         return Inertia::render('alerts/index', [
+             'alerts' => $alerts,
+             'warehouses' => $warehouses,
+             'filters' => $request->only(['status', 'warehouse_id']),
+             'role' => $user->roleModel->code,
+         ]);
+     }
 
     /**
      * Put a product on hold.
@@ -181,49 +204,65 @@ class StockAlertController extends Controller
     }
 
     /**
-     * Auto-detect stock alerts.
+     * Auto-detect stock alerts by warehouse.
      */
     private function detectStockAlerts(): void
     {
-        $products = Product::where('is_active', true)
-            ->withSum('stocks as current_stock', 'qty')
-            ->get();
+        $warehouses = Warehouse::where('is_active', true)->get();
+        $products = Product::where('is_active', true)->get();
+        
+        // Load all stocks into a nested map/lookup array
+        $stocks = Stock::all()->groupBy(['warehouse_id', 'product_id']);
 
-        foreach ($products as $product) {
-            $currentStock = $product->current_stock ?? 0;
-
-            if ($currentStock <= $product->minimum_stock) {
-                // Check if there is an active (non-closed) alert
-                $activeAlert = StockAlert::where('product_id', $product->id)
-                    ->where('status', '!=', 'closed')
-                    ->first();
-
-                if (!$activeAlert) {
-                    StockAlert::create([
-                        'product_id' => $product->id,
-                        'current_stock' => $currentStock,
-                        'minimum_stock' => $product->minimum_stock,
-                        'status' => 'open',
-                        'created_at' => now(),
-                    ]);
-                } else {
-                    // Update current stock if changed
-                    if ($activeAlert->current_stock !== $currentStock) {
-                        $activeAlert->update([
-                            'current_stock' => $currentStock,
-                        ]);
-                    }
+        foreach ($warehouses as $warehouse) {
+            foreach ($products as $product) {
+                // If a product has a stock entry in this warehouse, use its qty, otherwise 0
+                $stockQty = isset($stocks[$warehouse->id][$product->id]) 
+                    ? $stocks[$warehouse->id][$product->id]->first()->qty 
+                    : 0;
+                
+                $minimumStock = $product->minimum_stock;
+                
+                // If minimum stock is 0, we don't trigger alerts
+                if ($minimumStock <= 0) {
+                    continue;
                 }
-            } else {
-                // If stock is now sufficient, auto-close active alerts (open, restock)
-                // Do not auto-close 'hold' alerts since they are manually managed.
-                StockAlert::where('product_id', $product->id)
-                    ->whereIn('status', ['open', 'restock'])
-                    ->update([
-                        'status' => 'closed',
-                        'notes' => 'Stok mencukupi (auto-closed)',
-                        'handled_at' => now(),
-                    ]);
+
+                if ($stockQty <= $minimumStock) {
+                    // Check if there is an active (non-closed) alert for this product in this warehouse
+                    $activeAlert = StockAlert::where('product_id', $product->id)
+                        ->where('warehouse_id', $warehouse->id)
+                        ->where('status', '!=', 'closed')
+                        ->first();
+
+                    if (!$activeAlert) {
+                        StockAlert::create([
+                            'product_id' => $product->id,
+                            'warehouse_id' => $warehouse->id,
+                            'current_stock' => $stockQty,
+                            'minimum_stock' => $minimumStock,
+                            'status' => 'open',
+                            'created_at' => now(),
+                        ]);
+                    } else {
+                        // Update current stock if changed
+                        if ($activeAlert->current_stock !== $stockQty) {
+                            $activeAlert->update([
+                                'current_stock' => $stockQty,
+                            ]);
+                        }
+                    }
+                } else {
+                    // If stock is now sufficient, auto-close active alerts (open, restock)
+                    StockAlert::where('product_id', $product->id)
+                        ->where('warehouse_id', $warehouse->id)
+                        ->whereIn('status', ['open', 'restock'])
+                        ->update([
+                            'status' => 'closed',
+                            'notes' => 'Stok mencukupi (auto-closed)',
+                            'handled_at' => now(),
+                        ]);
+                }
             }
         }
     }

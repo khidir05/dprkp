@@ -70,5 +70,15 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('password'),
             'is_active' => true,
         ]);
+
+        // Seed default supplier for central team (Penganggar / Tim Pusat)
+        \App\Models\Supplier::firstOrCreate(
+            ['name' => 'Penganggar (Tim Pusat)'],
+            [
+                'phone' => '02112345678',
+                'address' => 'Kantor Pusat DPRKP DKI Jakarta',
+                'is_active' => true,
+            ]
+        );
     }
 }

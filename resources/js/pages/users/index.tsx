@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Edit2, ToggleLeft, ToggleRight, UserPlus, Link2 } from 'lucide-react';
@@ -25,17 +26,20 @@ type Props = {
         links: any[];
     };
     roles: Role[];
+    warehouses: Warehouse[];
     filters: {
         search?: string;
         role_id?: string;
     };
 };
 
-export default function UsersIndex({ users, roles, filters }: Props) {
+export default function UsersIndex({ users, roles, warehouses, filters }: Props) {
     const [search, setSearch] = useState(filters.search || '');
     const [selectedRoleId, setSelectedRoleId] = useState(filters.role_id || 'all');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [editingUser, setEditingUser] = useState<User | null>(null);
+    const [editingUser, setEditingUser] = useState<ManageableUser | null>(null);
+    const [warehouseSearch, setWarehouseSearch] = useState('');
+    const [isWhDropdownOpen, setIsWhDropdownOpen] = useState(false);
 
     const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
         role: '',
@@ -44,7 +48,12 @@ export default function UsersIndex({ users, roles, filters }: Props) {
         username: '',
         phone: '',
         password: '',
+        warehouse_ids: [] as number[],
     });
+
+    const selectedRoleObj = roles.find(r => String(r.id) === String(data.role));
+    const isAdminGudang = selectedRoleObj?.code === 'admin_gudang';
+    const isSubmitDisabled = processing || (isAdminGudang && warehouses.length === 0);
 
     const handleSearchChange = (val: string) => {
         setSearch(val);
@@ -78,19 +87,34 @@ export default function UsersIndex({ users, roles, filters }: Props) {
         setEditingUser(null);
         reset();
         clearErrors();
+        setData({
+            role: '',
+            name: '',
+            email: '',
+            username: '',
+            phone: '',
+            password: '',
+            warehouse_ids: [],
+        });
+        setWarehouseSearch('');
+        setIsWhDropdownOpen(false);
         setIsDialogOpen(true);
     };
 
-    const openEditDialog = (user: User) => {
+    const openEditDialog = (user: ManageableUser) => {
         setEditingUser(user);
+        const warehouseIds = user.warehouses ? user.warehouses.map((w) => w.id) : [];
         setData({
             role: String(user.role),
             name: user.name,
             email: user.email,
-            username: user.username as string,
+            username: (user.username as string) || '',
             phone: (user.phone as string) || '',
-            password: '', // Leave blank by default on edit
+            password: '',
+            warehouse_ids: warehouseIds,
         });
+        setWarehouseSearch('');
+        setIsWhDropdownOpen(false);
         clearErrors();
         setIsDialogOpen(true);
     };
@@ -317,12 +341,115 @@ export default function UsersIndex({ users, roles, filters }: Props) {
                                     />
                                     {errors.password && <p className="text-xs text-red-500">{errors.password}</p>}
                                 </div>
+
+                                {isAdminGudang && (
+                                    <div className="grid gap-2 border-t pt-4 mt-2 relative">
+                                        <Label className="font-bold">Gudang yang Dikelola</Label>
+                                        {warehouses.length > 0 ? (
+                                            <div className="relative">
+                                                {/* Trigger Button */}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setIsWhDropdownOpen(!isWhDropdownOpen)}
+                                                    className="flex min-h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-left"
+                                                >
+                                                    {data.warehouse_ids.length > 0 ? (
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {data.warehouse_ids.map((id) => {
+                                                                const wh = warehouses.find((w) => w.id === id);
+                                                                return wh ? (
+                                                                    <Badge key={id} variant="secondary" className="text-xs px-2 py-0.5 whitespace-nowrap">
+                                                                        {wh.name}
+                                                                    </Badge>
+                                                                ) : null;
+                                                            })}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-muted-foreground text-sm">Pilih gudang...</span>
+                                                    )}
+                                                    <span className="text-xs text-muted-foreground">▼</span>
+                                                </button>
+
+                                                {/* Dropdown Container */}
+                                                {isWhDropdownOpen && (
+                                                    <>
+                                                        <div
+                                                            className="fixed inset-0 z-40 bg-transparent"
+                                                            onClick={() => setIsWhDropdownOpen(false)}
+                                                        />
+                                                        <div className="absolute left-0 right-0 mt-1 z-50 rounded-md border bg-popover p-2 text-popover-foreground shadow-md outline-none animate-in fade-in-0 zoom-in-95 max-h-[220px] flex flex-col">
+                                                            {/* Search Input */}
+                                                            <Input
+                                                                type="text"
+                                                                placeholder="Cari nama atau kode gudang..."
+                                                                value={warehouseSearch}
+                                                                onChange={(e) => setWarehouseSearch(e.target.value)}
+                                                                className="h-8 mb-2 focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-0"
+                                                                autoFocus
+                                                            />
+                                                            {/* Scrollable list */}
+                                                            <div className="overflow-y-auto flex-1 space-y-1 pr-1">
+                                                                {warehouses.filter((wh) =>
+                                                                    wh.name.toLowerCase().includes(warehouseSearch.toLowerCase()) ||
+                                                                    wh.code.toLowerCase().includes(warehouseSearch.toLowerCase())
+                                                                ).length > 0 ? (
+                                                                    warehouses
+                                                                        .filter((wh) =>
+                                                                            wh.name.toLowerCase().includes(warehouseSearch.toLowerCase()) ||
+                                                                            wh.code.toLowerCase().includes(warehouseSearch.toLowerCase())
+                                                                        )
+                                                                        .map((wh) => {
+                                                                            const isChecked = data.warehouse_ids.includes(wh.id);
+                                                                            return (
+                                                                                <div
+                                                                                    key={wh.id}
+                                                                                    onClick={() => {
+                                                                                        if (isChecked) {
+                                                                                            setData('warehouse_ids', data.warehouse_ids.filter((id) => id !== wh.id));
+                                                                                        } else {
+                                                                                            setData('warehouse_ids', [...data.warehouse_ids, wh.id]);
+                                                                                        }
+                                                                                    }}
+                                                                                    className="flex items-center space-x-2 p-2 rounded hover:bg-muted/80 cursor-pointer transition-colors"
+                                                                                >
+                                                                                    <Checkbox
+                                                                                        id={`wh-dd-${wh.id}`}
+                                                                                        checked={isChecked}
+                                                                                        onCheckedChange={() => {}}
+                                                                                    />
+                                                                                    <div className="grid leading-none">
+                                                                                        <span className="text-sm font-medium">
+                                                                                            {wh.name}
+                                                                                        </span>
+                                                                                        <span className="text-[10px] text-muted-foreground">
+                                                                                            {wh.code}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                </div>
+                                                                            );
+                                                                        })
+                                                                ) : (
+                                                                    <p className="text-xs text-muted-foreground text-center py-4">Gudang tidak ditemukan.</p>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <p className="text-xs text-amber-600 font-semibold bg-amber-50 dark:bg-amber-950/20 p-2 rounded-lg border border-amber-200 dark:border-amber-900/30">
+                                                Belum ada gudang terdaftar. Silakan buat gudang terlebih dahulu sebelum memilih role Admin Gudang.
+                                            </p>
+                                        )}
+                                        {errors.warehouse_ids && <p className="text-xs text-red-500">{errors.warehouse_ids}</p>}
+                                    </div>
+                                )}
                             </div>
                             <DialogFooter>
                                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} disabled={processing}>
                                     Batal
                                 </Button>
-                                <Button type="submit" disabled={processing}>
+                                <Button type="submit" disabled={isSubmitDisabled}>
                                     Simpan
                                 </Button>
                             </DialogFooter>

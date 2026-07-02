@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\Role;
 use App\Models\RegistrationLink;
+use App\Models\Warehouse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -41,11 +42,13 @@ class UserManagementController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        $roles = Role::orderBy('nama')->get(['id', 'nama', 'label']);
+        $roles = Role::orderBy('nama')->get(['id', 'nama', 'label', 'code']);
+        $warehouses = Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'name', 'code']);
 
         return Inertia::render('users/index', [
             'users' => $users,
             'roles' => $roles,
+            'warehouses' => $warehouses,
             'filters' => $request->only(['search', 'role_id']),
         ]);
     }
@@ -64,6 +67,8 @@ class UserManagementController extends Controller
             'username' => 'required|string|alpha_dash|max:255|unique:users,username',
             'phone' => 'nullable|string|max:50',
             'password' => 'required|string|min:8',
+            'warehouse_ids' => 'array',
+            'warehouse_ids.*' => 'exists:warehouses,id',
         ], [
             'email.unique' => 'Email sudah terdaftar.',
             'username.unique' => 'Username sudah terdaftar.',
@@ -71,10 +76,20 @@ class UserManagementController extends Controller
         ]);
 
         $role = Role::find($validated['role']);
+
+        // Validation: admin_gudang must have at least one warehouse assigned
+        if ($role->code === 'admin_gudang') {
+            if (empty($validated['warehouse_ids'])) {
+                return redirect()->back()->withErrors([
+                    'warehouse_ids' => 'Admin Gudang wajib ditugaskan ke minimal satu gudang.'
+                ])->withInput();
+            }
+        }
+
         $count = User::where('role', $role->id)->count() + 1;
         $codeUser = $role->label . '-' . str_pad($count, 3, '0', STR_PAD_LEFT);
 
-        User::create([
+        $user = User::create([
             'role' => $validated['role'],
             'name' => $validated['name'],
             'email' => $validated['email'],
@@ -85,13 +100,15 @@ class UserManagementController extends Controller
             'is_active' => true,
         ]);
 
+        // Sync warehouses if role is admin_gudang
+        if ($role->code === 'admin_gudang' && !empty($validated['warehouse_ids'])) {
+            $user->warehouses()->sync($validated['warehouse_ids']);
+        }
+
         return redirect()->route('users.index')
             ->with('success', 'User berhasil dibuat secara langsung.');
     }
 
-    /**
-     * Update the specified user.
-     */
     public function update(Request $request, User $user): RedirectResponse
     {
         $this->authorizeAdmin($request);
@@ -103,10 +120,23 @@ class UserManagementController extends Controller
             'username' => 'required|string|alpha_dash|max:255|unique:users,username,' . $user->id,
             'phone' => 'nullable|string|max:50',
             'password' => 'nullable|string|min:8',
+            'warehouse_ids' => 'array',
+            'warehouse_ids.*' => 'exists:warehouses,id',
         ], [
             'email.unique' => 'Email sudah terdaftar.',
             'username.unique' => 'Username sudah terdaftar.',
         ]);
+
+        $role = Role::find($validated['role']);
+
+        // Validation: admin_gudang must have at least one warehouse assigned
+        if ($role->code === 'admin_gudang') {
+            if (empty($validated['warehouse_ids'])) {
+                return redirect()->back()->withErrors([
+                    'warehouse_ids' => 'Admin Gudang wajib ditugaskan ke minimal satu gudang.'
+                ])->withInput();
+            }
+        }
 
         $updateData = [
             'role' => $validated['role'],
@@ -118,7 +148,6 @@ class UserManagementController extends Controller
 
         // Regenerate code_user if role changed
         if ($user->role !== (int)$validated['role']) {
-            $role = Role::find($validated['role']);
             $count = User::where('role', $role->id)->count() + 1;
             $updateData['code_user'] = $role->label . '-' . str_pad($count, 3, '0', STR_PAD_LEFT);
         }
@@ -128,6 +157,13 @@ class UserManagementController extends Controller
         }
 
         $user->update($updateData);
+
+        // Sync warehouses if role is admin_gudang, otherwise detach
+        if ($role->code === 'admin_gudang') {
+            $user->warehouses()->sync($validated['warehouse_ids']);
+        } else {
+            $user->warehouses()->detach();
+        }
 
         return redirect()->route('users.index')
             ->with('success', 'User berhasil diperbarui.');

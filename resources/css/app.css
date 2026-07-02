@@ -141,3 +141,32 @@
         @apply bg-background text-foreground;
     }
 }
+
+@media print {
+    aside,
+    nav,
+    header,
+    .print\:hidden,
+    button,
+    .btn,
+    .no-print,
+    [data-sidebar="sidebar"],
+    .sidebar-trigger {
+        display: none !important;
+    }
+
+    main,
+    .main-content,
+    body {
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: white !important;
+        color: black !important;
+    }
+
+    table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+    }
+}

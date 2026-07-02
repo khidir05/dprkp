@@ -59,11 +59,14 @@ export default function DataTable<T>({
                 <Table>
                     <TableHeader className="bg-muted/50">
                         <TableRow>
-                            {headers.map((header, idx) => (
-                                <TableHead key={idx} className="font-semibold text-muted-foreground">
-                                    {header}
-                                </TableHead>
-                            ))}
+                            {headers.map((header, idx) => {
+                                const isAction = header.toLowerCase() === 'aksi' || header.toLowerCase() === 'tindakan';
+                                return (
+                                    <TableHead key={idx} className={`font-semibold text-muted-foreground ${isAction ? 'print:hidden' : ''}`}>
+                                        {header}
+                                    </TableHead>
+                                );
+                            })}
                         </TableRow>
                     </TableHeader>
                     <TableBody>

@@ -7,11 +7,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { AlertCircle, ShieldAlert, Play, Pause, Power, CheckCircle, RefreshCw, XCircle } from 'lucide-react';
+import { AlertCircle, ShieldAlert, Play, Pause, Power, CheckCircle, RefreshCw, XCircle, Printer } from 'lucide-react';
+
+type WarehouseType = {
+    id: number;
+    name: string;
+};
 
 type AlertType = {
     id: number;
     product_id: number;
+    warehouse_id: number;
     current_stock: number;
     minimum_stock: number;
     status: 'open' | 'restock' | 'hold' | 'closed';
@@ -29,6 +35,9 @@ type AlertType = {
             symbol: string;
         };
     };
+    warehouse?: {
+        name: string;
+    };
     handler?: {
         name: string;
     };
@@ -39,14 +48,17 @@ type Props = {
         data: AlertType[];
         links: any[];
     };
+    warehouses: WarehouseType[];
     filters: {
         status?: string;
+        warehouse_id?: string;
     };
     role: string;
 };
 
-export default function AlertsIndex({ alerts, filters, role }: Props) {
+export default function AlertsIndex({ alerts, warehouses, filters, role }: Props) {
     const [selectedStatus, setSelectedStatus] = useState(filters.status || 'active');
+    const [selectedWarehouse, setSelectedWarehouse] = useState(filters.warehouse_id || 'all');
     
     // Modal states
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -57,16 +69,30 @@ export default function AlertsIndex({ alerts, filters, role }: Props) {
 
     const isManager = role === 'manager' || role === 'super_admin';
 
-    const handleStatusFilterChange = (val: string) => {
-        setSelectedStatus(val);
+    const handleFiltersChange = (statusVal: string, whVal: string) => {
         const url = new URL(window.location.href);
-        if (val && val !== 'all') {
-            url.searchParams.set('status', val);
+        if (statusVal && statusVal !== 'all') {
+            url.searchParams.set('status', statusVal);
         } else {
             url.searchParams.delete('status');
         }
+        if (whVal && whVal !== 'all') {
+            url.searchParams.set('warehouse_id', whVal);
+        } else {
+            url.searchParams.delete('warehouse_id');
+        }
         url.searchParams.delete('page');
         window.location.href = url.pathname + url.search;
+    };
+
+    const handleStatusFilterChange = (val: string) => {
+        setSelectedStatus(val);
+        handleFiltersChange(val, selectedWarehouse);
+    };
+
+    const handleWarehouseFilterChange = (val: string) => {
+        setSelectedWarehouse(val);
+        handleFiltersChange(selectedStatus, val);
     };
 
     const openActionDialog = (alert: AlertType, action: 'hold' | 'restock' | 'close') => {
@@ -139,32 +165,68 @@ export default function AlertsIndex({ alerts, filters, role }: Props) {
         <>
             <Head title="Alert Stok Minimum" />
             <div className="p-6 space-y-6">
-                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 print:hidden">
                     <div>
                         <h1 className="text-2xl font-bold tracking-tight">Alert Stok Minimum</h1>
                         <p className="text-muted-foreground">Peringatan otomatis saat stok barang di gudang berada pada atau di bawah batas minimum.</p>
                     </div>
 
-                    <div className="w-full md:w-56">
-                        <Label htmlFor="filter-status" className="sr-only">Filter Status</Label>
-                        <Select value={selectedStatus} onValueChange={handleStatusFilterChange}>
-                            <SelectTrigger className="h-9">
-                                <SelectValue placeholder="Status Alert" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Semua Alert</SelectItem>
-                                <SelectItem value="active">Semua Alert Aktif</SelectItem>
-                                <SelectItem value="open">Open</SelectItem>
-                                <SelectItem value="restock">Restock</SelectItem>
-                                <SelectItem value="hold">Hold</SelectItem>
-                                <SelectItem value="closed">Closed</SelectItem>
-                            </SelectContent>
-                        </Select>
+                    <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                        <div className="w-full md:w-48">
+                            <Label htmlFor="filter-warehouse" className="sr-only">Filter Gudang</Label>
+                            <Select value={selectedWarehouse} onValueChange={handleWarehouseFilterChange}>
+                                <SelectTrigger className="h-9 rounded-xl">
+                                    <SelectValue placeholder="Pilih Gudang" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Semua Gudang</SelectItem>
+                                    {warehouses.map((wh) => (
+                                        <SelectItem key={wh.id} value={String(wh.id)}>
+                                            {wh.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="w-full md:w-48">
+                            <Label htmlFor="filter-status" className="sr-only">Filter Status</Label>
+                            <Select value={selectedStatus} onValueChange={handleStatusFilterChange}>
+                                <SelectTrigger className="h-9 rounded-xl">
+                                    <SelectValue placeholder="Status Alert" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Semua Alert</SelectItem>
+                                    <SelectItem value="active">Semua Alert Aktif</SelectItem>
+                                    <SelectItem value="open">Open (Batas Minimum)</SelectItem>
+                                    <SelectItem value="restock">Restock (Pengadaan)</SelectItem>
+                                    <SelectItem value="hold">Hold (Ditangguhkan)</SelectItem>
+                                    <SelectItem value="closed">Closed (Selesai/Tutup)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-9 gap-1.5 rounded-xl text-xs" 
+                            onClick={() => window.print()}
+                        >
+                            <Printer className="h-3.5 w-3.5" />
+                            <span>Cetak</span>
+                        </Button>
                     </div>
                 </div>
 
+                {/* Print Title (only visible when printing) */}
+                <div className="hidden print:block mb-6">
+                    <h1 className="text-xl font-bold">Laporan Alert Stok Minimum</h1>
+                    <p className="text-xs text-muted-foreground">Dicetak pada: {new Date().toLocaleString('id-ID')}</p>
+                    <hr className="my-2 border-slate-300" />
+                </div>
+
                 <DataTable
-                    headers={['Barang (SKU / Kode)', 'Stok Saat Ini', 'Min. Batas Stok', 'Status Alert', 'Keterangan / Penanggung Jawab', 'Aksi']}
+                    headers={['Gudang', 'Barang (SKU / Kode)', 'Stok Saat Ini', 'Min. Batas Stok', 'Status Alert', 'Keterangan / Penanggung Jawab', 'Aksi']}
                     items={alerts.data}
                     searchPlaceholder="Cari alert..."
                     paginationLinks={alerts.links}
@@ -172,6 +234,9 @@ export default function AlertsIndex({ alerts, filters, role }: Props) {
                         const product = alert.product;
                         return (
                             <tr key={alert.id} className="border-b transition-colors hover:bg-muted/50">
+                                <td className="p-4 font-semibold text-slate-800 dark:text-slate-200">
+                                    {alert.warehouse?.name || '-'}
+                                </td>
                                 <td className="p-4">
                                     <div className="font-semibold">{product?.name || '-'}</div>
                                     <div className="text-xs text-muted-foreground font-mono">
@@ -200,7 +265,7 @@ export default function AlertsIndex({ alerts, filters, role }: Props) {
                                         <div className="text-xs text-slate-400">Belum ditangani</div>
                                     )}
                                 </td>
-                                <td className="p-4">
+                                <td className="p-4 print:hidden">
                                     {isManager && alert.status !== 'closed' && (
                                         <div className="flex flex-wrap gap-2">
                                             {alert.status === 'open' && (
