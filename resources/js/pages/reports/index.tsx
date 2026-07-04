@@ -210,24 +210,26 @@ export default function ReportsIndex({
                                 </Button>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
+                             <div className={cn("grid grid-cols-1 gap-6 items-end", role === 'admin_gudang' ? "md:grid-cols-3" : "md:grid-cols-4")}>
                                 {/* Warehouse selector */}
-                                <div className="space-y-2">
-                                    <Label htmlFor="warehouse-select" className="text-xs font-bold text-slate-700">Pilih Gudang</Label>
-                                    <Select value={String(selectedWarehouseId || 'all')} onValueChange={setSelectedWarehouseId}>
-                                        <SelectTrigger id="warehouse-select" className="h-10 rounded-xl">
-                                            <SelectValue placeholder="Pilih Gudang" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">Semua Gudang</SelectItem>
-                                            {warehouses.map((wh) => (
-                                                <SelectItem key={wh.id} value={String(wh.id)}>
-                                                    {wh.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+                                {role !== 'admin_gudang' && (
+                                    <div className="space-y-2">
+                                        <Label htmlFor="warehouse-select" className="text-xs font-bold text-slate-700">Pilih Gudang</Label>
+                                        <Select value={String(selectedWarehouseId || 'all')} onValueChange={setSelectedWarehouseId}>
+                                            <SelectTrigger id="warehouse-select" className="h-10 rounded-xl">
+                                                <SelectValue placeholder="Pilih Gudang" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">Semua Gudang</SelectItem>
+                                                {warehouses.map((wh) => (
+                                                    <SelectItem key={wh.id} value={String(wh.id)}>
+                                                        {wh.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                )}
 
                                 {/* Start Date (Conditional) */}
                                 <div className={cn("space-y-2", reportType === 'stock' && "opacity-40 pointer-events-none")}>

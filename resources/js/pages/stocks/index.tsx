@@ -18,9 +18,10 @@ type Props = {
         search?: string;
         warehouse_id?: string;
     };
+    role: string;
 };
 
-export default function StocksIndex({ stocks, warehouses, filters }: Props) {
+export default function StocksIndex({ stocks, warehouses, filters, role }: Props) {
     const [search, setSearch] = useState(filters.search || '');
     const [selectedWarehouseId, setSelectedWarehouseId] = useState(filters.warehouse_id || 'all');
 
@@ -62,22 +63,24 @@ export default function StocksIndex({ stocks, warehouses, filters }: Props) {
                         <p className="text-muted-foreground">Lihat level ketersediaan stok barang saat ini di seluruh gudang.</p>
                     </div>
 
-                    <div className="w-full md:w-48">
-                        <Label htmlFor="filter-warehouse" className="sr-only">Filter Gudang</Label>
-                        <Select value={selectedWarehouseId} onValueChange={handleWarehouseFilterChange}>
-                            <SelectTrigger className="h-9">
-                                <SelectValue placeholder="Semua Gudang" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Semua Gudang</SelectItem>
-                                {warehouses.map((wh) => (
-                                    <SelectItem key={wh.id} value={String(wh.id)}>
-                                        {wh.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                    {role !== 'admin_gudang' && (
+                        <div className="w-full md:w-48">
+                            <Label htmlFor="filter-warehouse" className="sr-only">Filter Gudang</Label>
+                            <Select value={selectedWarehouseId} onValueChange={handleWarehouseFilterChange}>
+                                <SelectTrigger className="h-9">
+                                    <SelectValue placeholder="Semua Gudang" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Semua Gudang</SelectItem>
+                                    {warehouses.map((wh) => (
+                                        <SelectItem key={wh.id} value={String(wh.id)}>
+                                            {wh.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
                 </div>
 
                 <DataTable

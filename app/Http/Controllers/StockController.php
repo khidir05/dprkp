@@ -15,7 +15,14 @@ class StockController extends Controller
      */
     public function index(Request $request): Response
     {
+        $user = $request->user();
         $query = Stock::query()->with(['product.category', 'product.unit', 'warehouse']);
+
+        // Limit stocks for admin_gudang to their assigned warehouses
+        if ($user->roleModel->code === 'admin_gudang') {
+            $assignedWarehouseIds = $user->warehouses()->pluck('warehouses.id');
+            $query->whereIn('warehouse_id', $assignedWarehouseIds);
+        }
 
         if ($request->has('search')) {
             $search = $request->input('search');
@@ -34,12 +41,18 @@ class StockController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        $warehouses = Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'name', 'code']);
+        // Limit warehouses list for filter
+        if ($user->roleModel->code === 'admin_gudang') {
+            $warehouses = $user->warehouses()->orderBy('name')->get(['warehouses.id', 'warehouses.name', 'warehouses.code']);
+        } else {
+            $warehouses = Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'name', 'code']);
+        }
 
         return Inertia::render('stocks/index', [
             'stocks' => $stocks,
             'warehouses' => $warehouses,
             'filters' => $request->only(['search', 'warehouse_id']),
+            'role' => $user->roleModel->code,
         ]);
     }
 }

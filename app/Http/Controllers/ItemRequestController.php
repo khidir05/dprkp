@@ -130,6 +130,14 @@ class ItemRequestController extends Controller
      */
     public function show(Request $request, ItemRequest $itemRequest): Response
     {
+        $user = $request->user();
+        if ($user->roleModel->code === 'admin_gudang') {
+            $isAssigned = $user->warehouses()->where('warehouses.id', $itemRequest->warehouse_id)->exists();
+            if (!$isAssigned) {
+                abort(403, 'Anda tidak memiliki hak akses untuk melihat permohonan barang untuk gudang ini.');
+            }
+        }
+
         $itemRequest->load([
             'requester', 
             'warehouse', 
@@ -149,7 +157,7 @@ class ItemRequestController extends Controller
 
         return Inertia::render('requests/show', [
             'itemRequest' => $itemRequest,
-            'role' => $request->user()->roleModel->code,
+            'role' => $user->roleModel->code,
         ]);
     }
 

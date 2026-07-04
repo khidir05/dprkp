@@ -77,11 +77,11 @@ class UserManagementController extends Controller
 
         $role = Role::find($validated['role']);
 
-        // Validation: admin_gudang must have at least one warehouse assigned
+        // Validation: admin_gudang must have exactly one warehouse assigned
         if ($role->code === 'admin_gudang') {
-            if (empty($validated['warehouse_ids'])) {
+            if (empty($validated['warehouse_ids']) || count($validated['warehouse_ids']) !== 1) {
                 return redirect()->back()->withErrors([
-                    'warehouse_ids' => 'Admin Gudang wajib ditugaskan ke minimal satu gudang.'
+                    'warehouse_ids' => 'Admin Gudang wajib ditugaskan ke tepat satu gudang.'
                 ])->withInput();
             }
         }
@@ -129,11 +129,11 @@ class UserManagementController extends Controller
 
         $role = Role::find($validated['role']);
 
-        // Validation: admin_gudang must have at least one warehouse assigned
+        // Validation: admin_gudang must have exactly one warehouse assigned
         if ($role->code === 'admin_gudang') {
-            if (empty($validated['warehouse_ids'])) {
+            if (empty($validated['warehouse_ids']) || count($validated['warehouse_ids']) !== 1) {
                 return redirect()->back()->withErrors([
-                    'warehouse_ids' => 'Admin Gudang wajib ditugaskan ke minimal satu gudang.'
+                    'warehouse_ids' => 'Admin Gudang wajib ditugaskan ke tepat satu gudang.'
                 ])->withInput();
             }
         }

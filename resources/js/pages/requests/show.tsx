@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Head, useForm, Link, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ArrowLeft, Check, X, ShieldAlert, Package, Calendar, Landmark, User, MessageSquare, AlertTriangle, Truck, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Check, X, ShieldAlert, Package, Calendar, Landmark, User, MessageSquare, AlertTriangle, Truck, CheckCircle, Printer } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ItemRequest, RequestItem } from '@/types';
 
@@ -85,6 +85,25 @@ export default function RequestShow({ itemRequest, role }: Props) {
         ));
     };
 
+    useEffect(() => {
+        if (itemRequest.request_items) {
+            approveForm.setData('items', itemRequest.request_items.map((item) => ({
+                id: item.id,
+                qty_approved: item.qty_requested,
+            })));
+        }
+    }, [itemRequest.request_items]);
+
+    const openApproveDialog = () => {
+        if (itemRequest.request_items) {
+            approveForm.setData('items', itemRequest.request_items.map((item) => ({
+                id: item.id,
+                qty_approved: item.qty_requested,
+            })));
+        }
+        setIsApproveOpen(true);
+    };
+
     const submitApprove = (e: React.FormEvent) => {
         e.preventDefault();
         approveForm.patch(`/requests/${itemRequest.id}/approve`, {
@@ -148,7 +167,7 @@ export default function RequestShow({ itemRequest, role }: Props) {
             <div className="p-6 space-y-6">
                 <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
                     <div className="flex items-center gap-4">
-                        <Button asChild variant="outline" size="icon" className="h-8 w-8">
+                        <Button asChild variant="outline" size="icon" className="h-8 w-8 print:hidden">
                             <Link href="/requests">
                                 <ArrowLeft className="h-4 w-4" />
                             </Link>
@@ -159,7 +178,11 @@ export default function RequestShow({ itemRequest, role }: Props) {
                         </div>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 print:hidden">
+                        <Button variant="outline" className="gap-1.5" onClick={() => window.print()}>
+                            <Printer className="h-4 w-4" />
+                            <span>Cetak</span>
+                        </Button>
                         {/* Cancel request button for Pemohon */}
                         {itemRequest.status === 'pending' && (role === 'pemohon' || role === 'super_admin') && (
                             <Button variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200" onClick={submitCancel} disabled={cancelForm.processing}>
@@ -174,7 +197,7 @@ export default function RequestShow({ itemRequest, role }: Props) {
                                     <X className="h-4 w-4 mr-1.5" />
                                     <span>Tolak</span>
                                 </Button>
-                                <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setIsApproveOpen(true)}>
+                                <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={openApproveDialog}>
                                     <Check className="h-4 w-4 mr-1.5" />
                                     <span>Setujui Permintaan</span>
                                 </Button>

@@ -24,6 +24,7 @@ return new class extends Migration
             $table->string('code_user')->nullable();
             $table->string('username')->unique();
             $table->string('password');
+            $table->rememberToken();
             $table->boolean('is_active')->default(true);
 
             $table->timestamps();

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import DataTable from '@/components/data-table';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +23,9 @@ type Props = {
 };
 
 export default function InboundIndex({ transactions, warehouses, filters, canCreate }: Props) {
+    const { auth } = usePage().props as any;
+    const userRole = auth.user?.role_model?.code;
+
     const [search, setSearch] = useState(filters.search || '');
     const [selectedWarehouseId, setSelectedWarehouseId] = useState(filters.warehouse_id || 'all');
 
@@ -65,21 +68,23 @@ export default function InboundIndex({ transactions, warehouses, filters, canCre
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3">
-                        <div className="w-44">
-                            <Select value={selectedWarehouseId} onValueChange={handleWarehouseFilterChange}>
-                                <SelectTrigger className="h-9">
-                                    <SelectValue placeholder="Semua Gudang" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Semua Gudang</SelectItem>
-                                    {warehouses.map((wh) => (
-                                        <SelectItem key={wh.id} value={String(wh.id)}>
-                                            {wh.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
+                        {userRole !== 'admin_gudang' && (
+                            <div className="w-44">
+                                <Select value={selectedWarehouseId} onValueChange={handleWarehouseFilterChange}>
+                                    <SelectTrigger className="h-9">
+                                        <SelectValue placeholder="Semua Gudang" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Semua Gudang</SelectItem>
+                                        {warehouses.map((wh) => (
+                                            <SelectItem key={wh.id} value={String(wh.id)}>
+                                                {wh.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
 
                         {canCreate && (
                             <Button asChild size="sm" className="h-9 gap-1.5">

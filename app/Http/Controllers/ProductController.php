@@ -54,11 +54,11 @@ class ProductController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): \Symfony\Component\HttpFoundation\Response
     {
         $this->authorizeManagement($request);
 
-        $validated = $request->validate([
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
             'category_id' => 'required|exists:categories,id',
             'unit_id' => 'required|exists:units,id',
             'sku' => 'required|string|max:100|unique:products,sku',
@@ -75,10 +75,31 @@ class ProductController extends Controller
             'minimum_stock.required' => 'Stok minimum wajib diisi.',
         ]);
 
+        if ($validator->fails()) {
+            if ($request->wantsJson() || $request->ajax() || $request->has('ajax') || $request->acceptsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gagal membuat produk. Silakan periksa kembali form.',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
+
+        $validated = $validator->validated();
         $validated['is_active'] = true;
         $validated['is_hold'] = false;
 
-        Product::create($validated);
+        $product = Product::create($validated);
+
+        if ($request->wantsJson() || $request->ajax() || $request->has('ajax') || $request->acceptsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Barang berhasil ditambahkan.',
+                'product' => $product->load(['category', 'unit'])
+            ]);
+        }
 
         return redirect()->route('products.index')
             ->with('success', 'Barang berhasil ditambahkan.');

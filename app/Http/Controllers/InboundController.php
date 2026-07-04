@@ -8,6 +8,8 @@ use App\Models\Supplier;
 use App\Models\Warehouse;
 use App\Models\Product;
 use App\Models\Stock;
+use App\Models\Category;
+use App\Models\Unit;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -22,9 +24,16 @@ class InboundController extends Controller
      */
     public function index(Request $request): Response
     {
+        $user = $request->user();
         $query = InboundTransaction::query()
             ->with(['supplier', 'warehouse', 'createdBy'])
             ->withCount('inboundItems');
+
+        // Limit transactions for admin_gudang to their assigned warehouses
+        if ($user->roleModel->code === 'admin_gudang') {
+            $assignedWarehouseIds = $user->warehouses()->pluck('warehouses.id');
+            $query->whereIn('warehouse_id', $assignedWarehouseIds);
+        }
 
         if ($request->has('search')) {
             $search = $request->input('search');
@@ -43,13 +52,19 @@ class InboundController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        $warehouses = Warehouse::where('is_active', true)->get(['id', 'name', 'code']);
+        // Limit warehouses list for filter
+        if ($user->roleModel->code === 'admin_gudang') {
+            $warehouses = $user->warehouses()->where('is_active', true)->get(['warehouses.id', 'warehouses.name', 'warehouses.code']);
+        } else {
+            $warehouses = Warehouse::where('is_active', true)->get(['id', 'name', 'code']);
+        }
 
         return Inertia::render('inbound/index', [
             'transactions' => $transactions,
             'warehouses' => $warehouses,
             'filters' => $request->only(['search', 'warehouse_id']),
-            'canCreate' => $request->user()->roleModel->code === 'admin_gudang' || $request->user()->roleModel->code === 'super_admin',
+            'canCreate' => $user->roleModel->code === 'admin_gudang' || $user->roleModel->code === 'super_admin',
+            'role' => $user->roleModel->code,
         ]);
     }
 
@@ -69,6 +84,8 @@ class InboundController extends Controller
 
         $suppliers = Supplier::where('is_active', true)->orderBy('name')->get(['id', 'name']);
         $products = Product::where('is_active', true)->where('is_hold', false)->orderBy('name')->get(['id', 'name', 'code', 'sku']);
+        $categories = Category::orderBy('name')->get(['id', 'name']);
+        $units = Unit::orderBy('name')->get(['id', 'name', 'symbol']);
 
         // Auto-generate transaction number
         $count = InboundTransaction::whereDate('created_at', today())->count() + 1;
@@ -78,6 +95,8 @@ class InboundController extends Controller
             'suppliers' => $suppliers,
             'warehouses' => $warehouses,
             'products' => $products,
+            'categories' => $categories,
+            'units' => $units,
             'autoTransactionNumber' => $autoTransactionNumber,
         ]);
     }
@@ -162,6 +181,14 @@ class InboundController extends Controller
      */
     public function show(Request $request, InboundTransaction $inbound): Response
     {
+        $user = $request->user();
+        if ($user->roleModel->code === 'admin_gudang') {
+            $isAssigned = $user->warehouses()->where('warehouses.id', $inbound->warehouse_id)->exists();
+            if (!$isAssigned) {
+                abort(403, 'Anda tidak memiliki hak akses untuk melihat transaksi gudang ini.');
+            }
+        }
+
         $inbound->load(['supplier', 'warehouse', 'createdBy', 'inboundItems.product.unit']);
 
         return Inertia::render('inbound/show', [

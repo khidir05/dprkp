@@ -64,7 +64,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('stock-opnames/{stockOpname}/cancel', [StockOpnameController::class, 'cancel'])->name('stock-opnames.cancel');
 
     // Item Request Routes
-    Route::resource('requests', ItemRequestController::class)->only(['index', 'create', 'store', 'show']);
+    Route::resource('requests', ItemRequestController::class)->only(['index', 'create', 'store', 'show'])->parameters([
+        'requests' => 'itemRequest'
+    ]);
     Route::patch('requests/{itemRequest}/approve', [ItemRequestController::class, 'approve'])->name('requests.approve');
     Route::patch('requests/{itemRequest}/reject', [ItemRequestController::class, 'reject'])->name('requests.reject');
     Route::delete('requests/{itemRequest}/cancel', [ItemRequestController::class, 'cancel'])->name('requests.cancel');

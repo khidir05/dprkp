@@ -343,99 +343,24 @@ export default function UsersIndex({ users, roles, warehouses, filters }: Props)
                                 </div>
 
                                 {isAdminGudang && (
-                                    <div className="grid gap-2 border-t pt-4 mt-2 relative">
-                                        <Label className="font-bold">Gudang yang Dikelola</Label>
+                                    <div className="grid gap-2 border-t pt-4 mt-2">
+                                        <Label htmlFor="warehouse_id" className="font-bold">Gudang yang Dikelola</Label>
                                         {warehouses.length > 0 ? (
-                                            <div className="relative">
-                                                {/* Trigger Button */}
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setIsWhDropdownOpen(!isWhDropdownOpen)}
-                                                    className="flex min-h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-left"
-                                                >
-                                                    {data.warehouse_ids.length > 0 ? (
-                                                        <div className="flex flex-wrap gap-1">
-                                                            {data.warehouse_ids.map((id) => {
-                                                                const wh = warehouses.find((w) => w.id === id);
-                                                                return wh ? (
-                                                                    <Badge key={id} variant="secondary" className="text-xs px-2 py-0.5 whitespace-nowrap">
-                                                                        {wh.name}
-                                                                    </Badge>
-                                                                ) : null;
-                                                            })}
-                                                        </div>
-                                                    ) : (
-                                                        <span className="text-muted-foreground text-sm">Pilih gudang...</span>
-                                                    )}
-                                                    <span className="text-xs text-muted-foreground">▼</span>
-                                                </button>
-
-                                                {/* Dropdown Container */}
-                                                {isWhDropdownOpen && (
-                                                    <>
-                                                        <div
-                                                            className="fixed inset-0 z-40 bg-transparent"
-                                                            onClick={() => setIsWhDropdownOpen(false)}
-                                                        />
-                                                        <div className="absolute left-0 right-0 mt-1 z-50 rounded-md border bg-popover p-2 text-popover-foreground shadow-md outline-none animate-in fade-in-0 zoom-in-95 max-h-[220px] flex flex-col">
-                                                            {/* Search Input */}
-                                                            <Input
-                                                                type="text"
-                                                                placeholder="Cari nama atau kode gudang..."
-                                                                value={warehouseSearch}
-                                                                onChange={(e) => setWarehouseSearch(e.target.value)}
-                                                                className="h-8 mb-2 focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-0"
-                                                                autoFocus
-                                                            />
-                                                            {/* Scrollable list */}
-                                                            <div className="overflow-y-auto flex-1 space-y-1 pr-1">
-                                                                {warehouses.filter((wh) =>
-                                                                    wh.name.toLowerCase().includes(warehouseSearch.toLowerCase()) ||
-                                                                    wh.code.toLowerCase().includes(warehouseSearch.toLowerCase())
-                                                                ).length > 0 ? (
-                                                                    warehouses
-                                                                        .filter((wh) =>
-                                                                            wh.name.toLowerCase().includes(warehouseSearch.toLowerCase()) ||
-                                                                            wh.code.toLowerCase().includes(warehouseSearch.toLowerCase())
-                                                                        )
-                                                                        .map((wh) => {
-                                                                            const isChecked = data.warehouse_ids.includes(wh.id);
-                                                                            return (
-                                                                                <div
-                                                                                    key={wh.id}
-                                                                                    onClick={() => {
-                                                                                        if (isChecked) {
-                                                                                            setData('warehouse_ids', data.warehouse_ids.filter((id) => id !== wh.id));
-                                                                                        } else {
-                                                                                            setData('warehouse_ids', [...data.warehouse_ids, wh.id]);
-                                                                                        }
-                                                                                    }}
-                                                                                    className="flex items-center space-x-2 p-2 rounded hover:bg-muted/80 cursor-pointer transition-colors"
-                                                                                >
-                                                                                    <Checkbox
-                                                                                        id={`wh-dd-${wh.id}`}
-                                                                                        checked={isChecked}
-                                                                                        onCheckedChange={() => {}}
-                                                                                    />
-                                                                                    <div className="grid leading-none">
-                                                                                        <span className="text-sm font-medium">
-                                                                                            {wh.name}
-                                                                                        </span>
-                                                                                        <span className="text-[10px] text-muted-foreground">
-                                                                                            {wh.code}
-                                                                                        </span>
-                                                                                    </div>
-                                                                                </div>
-                                                                            );
-                                                                        })
-                                                                ) : (
-                                                                    <p className="text-xs text-muted-foreground text-center py-4">Gudang tidak ditemukan.</p>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </>
-                                                )}
-                                            </div>
+                                            <Select
+                                                value={data.warehouse_ids && data.warehouse_ids.length > 0 ? String(data.warehouse_ids[0]) : ''}
+                                                onValueChange={(val) => setData('warehouse_ids', val ? [parseInt(val)] : [])}
+                                            >
+                                                <SelectTrigger id="warehouse_id">
+                                                    <SelectValue placeholder="Pilih Gudang" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {warehouses.map((wh) => (
+                                                        <SelectItem key={wh.id} value={String(wh.id)}>
+                                                            {wh.name} ({wh.code})
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
                                         ) : (
                                             <p className="text-xs text-amber-600 font-semibold bg-amber-50 dark:bg-amber-950/20 p-2 rounded-lg border border-amber-200 dark:border-amber-900/30">
                                                 Belum ada gudang terdaftar. Silakan buat gudang terlebih dahulu sebelum memilih role Admin Gudang.

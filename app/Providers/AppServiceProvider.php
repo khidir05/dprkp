@@ -70,7 +70,7 @@ class AppServiceProvider extends ServiceProvider
                 
                 if ($item->status === 'approved') {
                     $notify(
-                        $item->created_by,
+                        $item->requester_id,
                         "Permintaan Disetujui",
                         "Permintaan barang #{$item->request_number} telah disetujui. Silakan tunggu pengambilan barang.",
                         'info',
@@ -94,7 +94,7 @@ class AppServiceProvider extends ServiceProvider
                 } elseif ($item->status === 'rejected') {
                     $reason = $item->rejection_reason ? " Alasan: " . $item->rejection_reason : "";
                     $notify(
-                        $item->created_by,
+                        $item->requester_id,
                         "Permintaan Ditolak",
                         "Permintaan barang #{$item->request_number} ditolak oleh Manager.{$reason}",
                         'warning',

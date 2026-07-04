@@ -173,15 +173,25 @@ class StockMutationController extends Controller
      */
     public function show(Request $request, StockMutation $mutation): Response
     {
-        if ($request->user()->roleModel->code === 'pemohon') {
+        $user = $request->user();
+        if ($user->roleModel->code === 'pemohon') {
             abort(403, 'Akses ditolak.');
+        }
+
+        // Authorize admin_gudang access (only involved warehouses)
+        if ($user->roleModel->code === 'admin_gudang') {
+            $isAssignedFrom = $user->warehouses()->where('warehouses.id', $mutation->from_warehouse_id)->exists();
+            $isAssignedTo = $user->warehouses()->where('warehouses.id', $mutation->to_warehouse_id)->exists();
+            if (!$isAssignedFrom && !$isAssignedTo) {
+                abort(403, 'Anda tidak memiliki hak akses untuk melihat mutasi barang ini.');
+            }
         }
 
         $mutation->load(['product.unit', 'fromWarehouse', 'toWarehouse', 'createdBy', 'approvedBy']);
 
         return Inertia::render('mutations/show', [
             'mutation' => $mutation,
-            'role' => $request->user()->roleModel->code,
+            'role' => $user->roleModel->code,
         ]);
     }
 

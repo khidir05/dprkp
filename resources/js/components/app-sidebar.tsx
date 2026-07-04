@@ -140,17 +140,21 @@ export function AppSidebar() {
             href: '/suppliers',
             icon: Truck,
         },
-        {
+    ];
+
+    if (userRole !== 'admin_gudang') {
+        masterItems.push({
             title: 'Gudang',
             href: '/warehouses',
             icon: Warehouse,
-        },
-        {
-            title: 'Barang',
-            href: '/products',
-            icon: Package,
-        }
-    ];
+        });
+    }
+
+    masterItems.push({
+        title: 'Barang',
+        href: '/products',
+        icon: Package,
+    });
 
     const adminItems: NavItem[] = [];
     if (userRole === 'super_admin') {

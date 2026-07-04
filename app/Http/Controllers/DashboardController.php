@@ -35,7 +35,7 @@ class DashboardController extends Controller
                 'products_count' => Product::count(),
                 'inbounds_count' => InboundTransaction::count(),
                 'outbounds_count' => OutboundTransaction::count(),
-                'recent_requests' => ItemRequest::with(['createdBy', 'warehouse'])->latest()->take(5)->get(),
+                'recent_requests' => ItemRequest::with(['requester', 'warehouse'])->latest()->take(5)->get(),
                 'recent_inbounds' => InboundTransaction::with(['warehouse', 'supplier', 'createdBy'])->latest()->take(5)->get(),
             ];
         } elseif ($role === 'manager') {
@@ -52,7 +52,7 @@ class DashboardController extends Controller
                 ->orderBy('month')
                 ->take(6)
                 ->get(),
-                'recent_pending_requests' => ItemRequest::with(['createdBy', 'warehouse'])->where('status', 'pending')->latest()->take(5)->get(),
+                'recent_pending_requests' => ItemRequest::with(['requester', 'warehouse'])->where('status', 'pending')->latest()->take(5)->get(),
             ];
         } elseif ($role === 'admin_gudang') {
             $warehouseIds = $user->warehouses()->pluck('warehouses.id');
@@ -79,7 +79,7 @@ class DashboardController extends Controller
                     ->latest()
                     ->take(5)
                     ->get(),
-                'recent_dispatches' => OutboundTransaction::with(['recipient', 'createdBy', 'warehouse'])
+                'recent_dispatches' => OutboundTransaction::with(['itemRequest.requester', 'processedBy', 'warehouse'])
                     ->whereIn('warehouse_id', $warehouseIds)
                     ->latest()
                     ->take(5)
