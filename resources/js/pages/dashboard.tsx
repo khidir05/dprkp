@@ -547,10 +547,6 @@ export default function Dashboard({ stats, role }: Props) {
                         <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-zinc-400 bg-clip-text text-transparent">
                             Selamat Datang Kembali
                         </h1>
-                        <p className="text-muted-foreground mt-1.5 flex items-center gap-1.5 text-sm">
-                            <Activity className="h-4 w-4 text-indigo-500" />
-                            Sistem Management Inventaris DPRKP &bull; Mode: {role.replace('_', ' ').toUpperCase()}
-                        </p>
                     </div>
                     <div className="text-xs text-muted-foreground font-mono bg-slate-50 dark:bg-zinc-800/40 border dark:border-zinc-800 px-3 py-1.5 rounded-lg flex items-center gap-2 self-start sm:self-auto">
                         <Calendar className="h-3.5 w-3.5" />

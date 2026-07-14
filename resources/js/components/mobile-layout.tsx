@@ -57,8 +57,8 @@ export function MobileLayout({ children }: MobileLayoutProps) {
             {/* Sticky Mobile Header */}
             <header className="sticky top-0 z-30 flex h-14 w-full shrink-0 items-center justify-between border-b border-sidebar-border/50 bg-background/95 px-4 backdrop-blur">
                 <div className="flex items-center gap-2">
-                    <img src="/dprkp.png" alt="DPRKP Logo" className="h-6 w-auto object-contain" />
-                    <span className="font-bold text-sm tracking-tight text-foreground">DPRKP Inventaris</span>
+                    <img src="/siperus.png" alt="SIPERUS Logo" className="h-6 w-auto object-contain" />
+                    <span className="font-bold text-sm tracking-tight text-foreground">SIPERUS</span>
                 </div>
 
                 <div className="flex items-center gap-2">

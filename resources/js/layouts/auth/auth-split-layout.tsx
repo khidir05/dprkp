@@ -28,9 +28,8 @@ export default function AuthSplitLayout({
                 {images.map((img, idx) => (
                     <div
                         key={img}
-                        className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-                            idx === currentImageIndex ? 'opacity-100' : 'opacity-0'
-                        }`}
+                        className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${idx === currentImageIndex ? 'opacity-100' : 'opacity-0'
+                            }`}
                         style={{
                             backgroundImage: `url(${img})`,
                             backgroundSize: 'cover',
@@ -45,11 +44,14 @@ export default function AuthSplitLayout({
                 <div className="relative z-20 m-auto text-center px-4 lg:px-10 max-w-lg flex flex-col items-center">
                     <div className="flex items-center justify-center gap-3 mb-2 lg:mb-4">
                         <img src="/dki.png" alt="DKI Jakarta Logo" className="h-9 lg:h-14 w-auto object-contain" />
-                        <img src="/dprkp.png" alt="DPRKP Logo" className="h-9 lg:h-14 w-auto object-contain" />
+                        <img src="/siperus.png" alt="SIPERUS Logo" className="h-9 lg:h-14 w-auto object-contain" />
                     </div>
                     <h2 className="text-lg sm:text-xl lg:text-3xl font-extrabold tracking-tight drop-shadow-md">
-                        SISTEM INVENTARIS &amp; PERMINTAAN BARANG
+                        SIPERUS
                     </h2>
+                    <h3 className="text-lg sm:text-xl lg:text-3xl font-extrabold tracking-tight drop-shadow-md">
+                        Sistem Informasi Persediaan Rumah Susun
+                    </h3>
                     <div className="w-12 lg:w-16 h-[2px] lg:h-1 bg-sky-400 mx-auto my-2 lg:my-4 rounded-full" />
                     <p className="text-[10px] sm:text-xs lg:text-sm text-neutral-200 font-medium tracking-wide drop-shadow-sm">
                         Dinas Perumahan Rakyat dan Kawasan Permukiman Provinsi DKI Jakarta

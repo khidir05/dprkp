@@ -30,9 +30,9 @@
             }
         </style>
 
-        <link rel="icon" href="/dprkp.ico" sizes="any">
-        <link rel="icon" href="/dprkp.png" type="image/png">
-        <link rel="apple-touch-icon" href="/dprkp.png">
+        <link rel="icon" href="/siperus.ico" sizes="any">
+        <link rel="icon" href="/siperus.png" type="image/png">
+        <link rel="apple-touch-icon" href="/siperus.png">
 
         @fonts
 

@@ -3,8 +3,8 @@ import type { ImgHTMLAttributes } from 'react';
 export default function AppLogoIcon(props: ImgHTMLAttributes<HTMLImageElement>) {
     return (
         <img
-            src="/dprkp.png"
-            alt="DPRKP Logo"
+            src="/siperus.png"
+            alt="SIPERUS Logo"
             {...props}
         />
     );
