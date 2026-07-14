@@ -487,28 +487,7 @@ export default function InboundCreate({ suppliers, warehouses, products, categor
                                 </div>
                             )}
 
-                             <div className="grid gap-2">
-                                <Label htmlFor="transaction_number">No. Transaksi</Label>
-                                <Input
-                                    id="transaction_number"
-                                    value={data.transaction_number}
-                                    onChange={(e) => setData('transaction_number', e.target.value)}
-                                    placeholder="Contoh: INB-20231010-0001"
-                                    required
-                                />
-                                {errors.transaction_number && <p className="text-xs text-red-500">{errors.transaction_number}</p>}
-                            </div>
 
-                            <div className="grid gap-2">
-                                <Label htmlFor="reference_document">No. Surat Jalan / Referensi</Label>
-                                <Input
-                                    id="reference_document"
-                                    value={data.reference_document}
-                                    onChange={(e) => setData('reference_document', e.target.value)}
-                                    placeholder="Contoh: SJ-998822"
-                                />
-                                {errors.reference_document && <p className="text-xs text-red-500">{errors.reference_document}</p>}
-                            </div>
 
                             <div className="grid gap-2">
                                 <Label htmlFor="transaction_date">Tanggal Transaksi</Label>
