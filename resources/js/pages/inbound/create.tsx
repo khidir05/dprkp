@@ -41,6 +41,12 @@ type FormItem = {
     code: string;
     name: string;
     symbol: string;
+    bast_number: string;
+    unit_id?: string;
+    category_id?: string;
+    brand?: string;
+    packaging?: string;
+    brand_packaging?: string;
 };
 
 export default function InboundCreate({ suppliers, warehouses, products, categories, units, autoTransactionNumber }: Props) {
@@ -56,113 +62,41 @@ export default function InboundCreate({ suppliers, warehouses, products, categor
         transaction_date: today,
         notes: '',
         items: [
-            { product_id: 0, qty: 1, sku: '', code: '', name: '', symbol: '' }
+            {
+                product_id: 0,
+                qty: 1,
+                sku: '',
+                code: '',
+                name: '',
+                symbol: '',
+                bast_number: '',
+                unit_id: '',
+                category_id: '',
+                brand: '',
+                packaging: '',
+                brand_packaging: ''
+            }
         ] as FormItem[],
     });
 
     // Autocomplete states
     const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
-    const [inlineProductRowIdx, setInlineProductRowIdx] = useState<number | null>(null);
-
-    // Modal state for creating new product
-    const [isProductModalOpen, setIsProductModalOpen] = useState(false);
-    const [newProduct, setNewProduct] = useState({
-        name: '',
-        sku: '',
-        code: '',
-        category_id: '',
-        unit_id: '',
-        description: '',
-        minimum_stock: '0',
-    });
-    const [productErrors, setProductErrors] = useState<any>({});
-    const [savingProduct, setSavingProduct] = useState(false);
-
-    const openProductModal = () => {
-        const rand = Math.floor(1000 + Math.random() * 9000);
-        const autoSKU = 'SKU-' + Date.now().toString().slice(-6) + '-' + rand;
-        const autoCode = 'PRD-' + Date.now().toString().slice(-6) + '-' + rand;
-
-        setNewProduct({
-            name: '',
-            sku: autoSKU,
-            code: autoCode,
-            category_id: '',
-            unit_id: '',
-            description: '',
-            minimum_stock: '0',
-        });
-        setProductErrors({});
-        setIsProductModalOpen(true);
-    };
-
-    const handleCreateNewProductInline = (idx: number, name: string) => {
-        const rand = Math.floor(1000 + Math.random() * 9000);
-        const autoSKU = 'SKU-' + Date.now().toString().slice(-6) + '-' + rand;
-        const autoCode = 'PRD-' + Date.now().toString().slice(-6) + '-' + rand;
-
-        setNewProduct({
-            name: name,
-            sku: autoSKU,
-            code: autoCode,
-            category_id: '',
-            unit_id: '',
-            description: '',
-            minimum_stock: '0',
-        });
-        setProductErrors({});
-        setInlineProductRowIdx(idx);
-        setIsProductModalOpen(true);
-    };
-
-    const handleSaveProduct = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setSavingProduct(true);
-        setProductErrors({});
-
-        try {
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-
-            const response = await fetch('/products', {
-                method: 'POST',
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken,
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-                body: JSON.stringify(newProduct)
-            });
-
-            const responseData = await response.json();
-
-            if (response.ok && responseData.success) {
-                const createdProduct = responseData.product;
-                setProductList(prev => [...prev, createdProduct]);
-                
-                if (inlineProductRowIdx !== null) {
-                    handleSelectProduct(inlineProductRowIdx, createdProduct);
-                    setInlineProductRowIdx(null);
-                }
-                
-                toast.success('Produk baru berhasil dibuat!');
-                setIsProductModalOpen(false);
-            } else if (responseData.errors) {
-                setProductErrors(responseData.errors);
-                toast.error('Gagal membuat produk. Silakan periksa kembali form.');
-            } else {
-                toast.error(responseData.message || 'Terjadi kesalahan saat menyimpan produk.');
-            }
-        } catch (error: any) {
-            toast.error('Terjadi kesalahan koneksi saat menyimpan produk.');
-        } finally {
-            setSavingProduct(false);
-        }
-    };
 
     const handleProductSearchChange = (idx: number, query: string) => {
         setData('items', data.items.map((item, i) =>
-            i === idx ? { ...item, name: query, product_id: 0, sku: '', code: '', symbol: '' } : item
+            i === idx ? {
+                ...item,
+                name: query,
+                product_id: 0,
+                sku: '',
+                code: '',
+                symbol: '',
+                unit_id: '',
+                category_id: '',
+                brand: '',
+                packaging: '',
+                brand_packaging: ''
+            } : item
         ));
     };
 
@@ -179,12 +113,13 @@ export default function InboundCreate({ suppliers, warehouses, products, categor
             if (suggestions.length > 0) {
                 handleSelectProduct(idx, suggestions[0]);
             } else if (query.trim().length > 0) {
-                handleCreateNewProductInline(idx, query);
+                focusCell(idx, 'unit_id');
             }
         }
     };
 
     const handleSelectProduct = (idx: number, product: Product) => {
+        const brandAndPkg = [product.brand, product.packaging].filter(Boolean).join(' / ');
         setData('items', data.items.map((item, i) =>
             i === idx ? {
                 product_id: product.id,
@@ -192,14 +127,17 @@ export default function InboundCreate({ suppliers, warehouses, products, categor
                 sku: product.sku,
                 code: product.code,
                 symbol: product.unit?.symbol || 'pcs',
-                qty: item.qty || 1
+                qty: item.qty || 1,
+                bast_number: item.bast_number,
+                unit_id: String(product.unit_id),
+                category_id: String(product.category_id),
+                brand: product.brand || '',
+                packaging: product.packaging || '',
+                brand_packaging: brandAndPkg || '-'
             } : item
         ));
         setActiveRowIndex(null);
-        // Automatically focus the quantity input of the current row
-        setTimeout(() => {
-            document.getElementById(`qty-input-${idx}`)?.focus();
-        }, 50);
+        focusCell(idx, 'bast_number');
     };
 
     const handleQtyChange = (idx: number, qty: number) => {
@@ -211,28 +149,204 @@ export default function InboundCreate({ suppliers, warehouses, products, categor
     const handleAddRow = () => {
         setData('items', [
             ...data.items,
-            { product_id: 0, qty: 1, sku: '', code: '', name: '', symbol: '' }
+            {
+                product_id: 0,
+                qty: 1,
+                sku: '',
+                code: '',
+                name: '',
+                symbol: '',
+                bast_number: '',
+                unit_id: '',
+                category_id: '',
+                brand: '',
+                packaging: '',
+                brand_packaging: ''
+            }
         ]);
     };
 
     const handleRemoveRow = (idx: number) => {
         if (data.items.length === 1) {
             setData('items', [
-                { product_id: 0, qty: 1, sku: '', code: '', name: '', symbol: '' }
+                {
+                    product_id: 0,
+                    qty: 1,
+                    sku: '',
+                    code: '',
+                    name: '',
+                    symbol: '',
+                    bast_number: '',
+                    unit_id: '',
+                    category_id: '',
+                    brand: '',
+                    packaging: '',
+                    brand_packaging: ''
+                }
             ]);
         } else {
             setData('items', data.items.filter((_, i) => i !== idx));
         }
     };
 
-    const handleQtyKeyDown = (idx: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter') {
+    const handleBastNumberChange = (idx: number, bast_number: string) => {
+        setData('items', data.items.map((item, i) =>
+            i === idx ? { ...item, bast_number } : item
+        ));
+    };
+
+    const handleItemFieldChange = (idx: number, field: string, value: string) => {
+        setData('items', data.items.map((item, i) =>
+            i === idx ? { ...item, [field]: value } : item
+        ));
+    };
+
+    const getFocusableFields = (item: FormItem) => {
+        if (item.product_id === 0) {
+            return ['name', 'unit_id', 'bast_number', 'category_id', 'brand', 'packaging', 'qty'];
+        } else {
+            return ['name', 'bast_number', 'qty'];
+        }
+    };
+
+    const focusCell = (rowIdx: number, field: string) => {
+        let elementId = '';
+        if (field === 'name') elementId = `product-input-${rowIdx}`;
+        else if (field === 'unit_id') elementId = `unit-select-${rowIdx}`;
+        else if (field === 'bast_number') elementId = `bast-input-${rowIdx}`;
+        else if (field === 'category_id') elementId = `category-select-${rowIdx}`;
+        else if (field === 'brand') elementId = `brand-input-${rowIdx}`;
+        else if (field === 'packaging') elementId = `packaging-input-${rowIdx}`;
+        else if (field === 'qty') elementId = `qty-input-${rowIdx}`;
+
+        setTimeout(() => {
+            const el = document.getElementById(elementId);
+            if (el) el.focus();
+        }, 50);
+    };
+
+    const handleGridKeyDown = (idx: number, field: string, e: React.KeyboardEvent<HTMLElement>) => {
+        // Ctrl + V: Focus product input to paste barcode
+        if (e.ctrlKey && e.key.toLowerCase() === 'v') {
+            if (field !== 'name') {
+                e.preventDefault();
+                focusCell(idx, 'name');
+            }
+            return;
+        }
+
+        // Ins: Baris baru
+        if (e.key === 'Insert') {
+            e.preventDefault();
+            handleAddRow();
+            return;
+        }
+
+        // Del: Hapus baris
+        if (e.key === 'Delete') {
+            e.preventDefault();
+            handleRemoveRow(idx);
+            return;
+        }
+
+        // Esc: Close suggestions
+        if (e.key === 'Escape') {
+            setActiveRowIndex(null);
+            return;
+        }
+
+        const fields = getFocusableFields(data.items[idx]);
+        const fieldIdx = fields.indexOf(field);
+
+        // Tab or Enter: Next cell
+        if (e.key === 'Tab' || e.key === 'Enter') {
+            const suggestions = productList.filter((p) =>
+                p.name.toLowerCase().includes(data.items[idx].name.toLowerCase()) ||
+                p.code.toLowerCase().includes(data.items[idx].name.toLowerCase()) ||
+                p.sku.toLowerCase().includes(data.items[idx].name.toLowerCase())
+            );
+
+            // For product search, if suggestions are open and they press Enter, don't trigger cell navigation
+            if (field === 'name' && activeRowIndex === idx && suggestions.length > 0 && e.key === 'Enter') {
+                return; // Let handleProductKeyDown handle selection
+            }
+
+            e.preventDefault();
+            if (e.shiftKey) {
+                // Move backward
+                if (fieldIdx > 0) {
+                    focusCell(idx, fields[fieldIdx - 1]);
+                } else if (idx > 0) {
+                    const prevFields = getFocusableFields(data.items[idx - 1]);
+                    focusCell(idx - 1, prevFields[prevFields.length - 1]);
+                }
+            } else {
+                // Move forward
+                if (fieldIdx < fields.length - 1) {
+                    focusCell(idx, fields[fieldIdx + 1]);
+                } else {
+                    if (idx === data.items.length - 1) {
+                        handleAddRow();
+                    } else {
+                        focusCell(idx + 1, 'name');
+                    }
+                }
+            }
+            return;
+        }
+
+        // Arrow keys navigation
+        if (e.key === 'ArrowUp' && idx > 0) {
+            e.preventDefault();
+            const prevFields = getFocusableFields(data.items[idx - 1]);
+            if (prevFields.includes(field)) {
+                focusCell(idx - 1, field);
+            } else {
+                focusCell(idx - 1, 'name');
+            }
+            return;
+        }
+        if (e.key === 'ArrowDown') {
             e.preventDefault();
             if (idx === data.items.length - 1) {
                 handleAddRow();
             } else {
-                document.getElementById(`product-input-${idx + 1}`)?.focus();
+                const nextFields = getFocusableFields(data.items[idx + 1]);
+                if (nextFields.includes(field)) {
+                    focusCell(idx + 1, field);
+                } else {
+                    focusCell(idx + 1, 'name');
+                }
             }
+            return;
+        }
+
+        // Arrow left / right
+        const isSelect = e.currentTarget.tagName.toLowerCase() === 'select';
+        const inputEl = e.currentTarget as HTMLInputElement;
+
+        if (e.key === 'ArrowLeft') {
+            if (isSelect || inputEl.selectionStart === 0) {
+                e.preventDefault();
+                if (fieldIdx > 0) {
+                    focusCell(idx, fields[fieldIdx - 1]);
+                } else if (idx > 0) {
+                    const prevFields = getFocusableFields(data.items[idx - 1]);
+                    focusCell(idx - 1, prevFields[prevFields.length - 1]);
+                }
+            }
+            return;
+        }
+        if (e.key === 'ArrowRight') {
+            if (isSelect || inputEl.selectionStart === inputEl.value.length) {
+                e.preventDefault();
+                if (fieldIdx < fields.length - 1) {
+                    focusCell(idx, fields[fieldIdx + 1]);
+                } else if (idx < data.items.length - 1) {
+                    focusCell(idx + 1, 'name');
+                }
+            }
+            return;
         }
     };
 
@@ -249,11 +363,26 @@ export default function InboundCreate({ suppliers, warehouses, products, categor
         e.preventDefault();
 
         // Filter out empty rows
-        const validItems = data.items.filter(item => item.product_id > 0);
+        const validItems = data.items.filter(item => item.name.trim().length > 0);
 
         if (validItems.length === 0) {
             toast.error('Tambahkan minimal 1 barang yang valid ke dalam daftar.');
             return;
+        }
+
+        // Validate that if product_id is 0, they selected category and unit
+        for (let i = 0; i < validItems.length; i++) {
+            const item = validItems[i];
+            if (item.product_id === 0) {
+                if (!item.unit_id) {
+                    toast.error(`Baris #${i + 1}: Satuan wajib dipilih untuk barang baru.`);
+                    return;
+                }
+                if (!item.category_id) {
+                    toast.error(`Baris #${i + 1}: Kategori wajib dipilih untuk barang baru.`);
+                    return;
+                }
+            }
         }
 
         if (!data.supplier_id) {
@@ -266,9 +395,22 @@ export default function InboundCreate({ suppliers, warehouses, products, categor
             return;
         }
 
+        // Parse brand_packaging (split by '/') for new products
+        const processedItems = validItems.map(item => {
+            if (item.product_id === 0 && item.brand_packaging) {
+                const parts = item.brand_packaging.split('/').map(p => p.trim());
+                return {
+                    ...item,
+                    brand: parts[0] || '',
+                    packaging: parts[1] || ''
+                };
+            }
+            return item;
+        });
+
         router.post('/inbound', {
             ...data,
-            items: validItems
+            items: processedItems
         });
     };
 
@@ -345,7 +487,7 @@ export default function InboundCreate({ suppliers, warehouses, products, categor
                                 </div>
                             )}
 
-                            <div className="grid gap-2">
+                             <div className="grid gap-2">
                                 <Label htmlFor="transaction_number">No. Transaksi</Label>
                                 <Input
                                     id="transaction_number"
@@ -413,14 +555,59 @@ export default function InboundCreate({ suppliers, warehouses, products, categor
                             </Button>
                         </CardHeader>
                         <CardContent className="pt-6">
+                            {/* Keyboard Shortcuts Legend Bar */}
+                            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 py-3 px-4 mb-4 rounded-xl bg-slate-50 dark:bg-zinc-800/40 border border-slate-100 dark:border-zinc-800 text-xs text-slate-500 dark:text-zinc-400">
+                                <div className="flex items-center gap-1">
+                                    <kbd className="px-1.5 py-0.5 rounded border bg-white dark:bg-zinc-950 font-mono shadow-sm font-semibold">Tab</kbd>
+                                    <span>/</span>
+                                    <kbd className="px-1.5 py-0.5 rounded border bg-white dark:bg-zinc-950 font-mono shadow-sm font-semibold">Enter</kbd>
+                                    <span className="text-muted-foreground ml-1">Selanjutnya</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <kbd className="px-1.5 py-0.5 rounded border bg-white dark:bg-zinc-950 font-mono shadow-sm font-semibold">Shift</kbd>
+                                    <span>+</span>
+                                    <kbd className="px-1.5 py-0.5 rounded border bg-white dark:bg-zinc-950 font-mono shadow-sm font-semibold">Tab</kbd>
+                                    <span className="text-muted-foreground ml-1">Sebelumnya</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <kbd className="px-1.5 py-0.5 rounded border bg-white dark:bg-zinc-950 font-mono shadow-sm font-semibold">Esc</kbd>
+                                    <span className="text-muted-foreground ml-1">Seleksi sel</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <span className="font-semibold font-mono text-sm">← → ↑ ↓</span>
+                                    <span className="text-muted-foreground ml-1">Navigasi</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <kbd className="px-1.5 py-0.5 rounded border bg-white dark:bg-zinc-950 font-mono shadow-sm font-semibold">Ins</kbd>
+                                    <span className="text-muted-foreground ml-1">Baris baru</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <kbd className="px-1.5 py-0.5 rounded border bg-white dark:bg-zinc-950 font-mono shadow-sm font-semibold">Del</kbd>
+                                    <span className="text-muted-foreground ml-1">Hapus baris</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <kbd className="px-1.5 py-0.5 rounded border bg-white dark:bg-zinc-950 font-mono shadow-sm font-semibold">Ctrl</kbd>
+                                    <span>+</span>
+                                    <kbd className="px-1.5 py-0.5 rounded border bg-white dark:bg-zinc-950 font-mono shadow-sm font-semibold">V</kbd>
+                                    <span className="text-muted-foreground ml-1">Tempel barcode</span>
+                                </div>
+                                <div className="text-slate-400 dark:text-zinc-500 italic">
+                                    Ketuk karakter untuk edit sel
+                                </div>
+                            </div>
+
                             <div className="rounded-md border overflow-visible relative w-full">
                                 <table className="w-full caption-bottom text-sm">
                                     <TableHeader className="bg-muted/50">
                                         <TableRow>
                                             <TableHead className="w-12 text-center">No.</TableHead>
-                                            <TableHead className="w-3/5">Barang / Produk</TableHead>
-                                            <TableHead className="w-1/4">Jumlah Masuk</TableHead>
-                                            <TableHead className="w-16 text-center"></TableHead>
+                                            <TableHead className="w-1/3">Barang / Produk</TableHead>
+                                            <TableHead className="w-20 text-center">Satuan</TableHead>
+                                            <TableHead className="w-44">No. BAST</TableHead>
+                                            <TableHead className="w-32">Kategori</TableHead>
+                                            <TableHead className="w-40">Merk / Kemasan</TableHead>
+                                            <TableHead className="w-28 text-center">Jumlah Masuk</TableHead>
+                                            <TableHead className="w-12 text-center"></TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -430,6 +617,12 @@ export default function InboundCreate({ suppliers, warehouses, products, categor
                                                 p.code.toLowerCase().includes(item.name.toLowerCase()) ||
                                                 p.sku.toLowerCase().includes(item.name.toLowerCase())
                                             );
+
+                                            const selectedProduct = productList.find(p => p.id === item.product_id);
+                                            const categoryName = selectedProduct?.category?.name || '-';
+                                            const brandAndPkg = selectedProduct
+                                                ? [selectedProduct.brand, selectedProduct.packaging].filter(Boolean).join(' / ') || '-'
+                                                : '-';
 
                                             return (
                                                 <TableRow key={idx} className="hover:bg-muted/10">
@@ -463,19 +656,24 @@ export default function InboundCreate({ suppliers, warehouses, products, categor
                                                                         onMouseDown={() => handleSelectProduct(idx, p)}
                                                                         className="flex justify-between items-center px-2.5 py-2 text-sm rounded-sm hover:bg-indigo-600 hover:text-white cursor-pointer transition-colors"
                                                                     >
-                                                                        <span className="font-medium">{p.name}</span>
+                                                                        <div className="flex flex-col">
+                                                                            <span className="font-medium">{p.name}</span>
+                                                                            {(p.brand || p.packaging) && (
+                                                                                <span className="text-[10px] opacity-75">
+                                                                                    {p.brand && <span>Merk: {p.brand}</span>}
+                                                                                    {p.brand && p.packaging && <span className="mx-1">&bull;</span>}
+                                                                                    {p.packaging && <span>Kemasan: {p.packaging}</span>}
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
                                                                         <span className="font-mono text-xs opacity-80">{p.code}</span>
                                                                     </div>
                                                                 ))}
                                                                 
                                                                 {/* Option to create a new product inline */}
-                                                                {item.name.trim().length > 0 && (
-                                                                    <div
-                                                                        onMouseDown={() => handleCreateNewProductInline(idx, item.name)}
-                                                                        className="flex items-center gap-1.5 px-2.5 py-2.5 text-sm rounded-sm hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950/20 dark:hover:text-emerald-400 font-semibold text-indigo-600 dark:text-indigo-400 cursor-pointer border-t mt-1"
-                                                                    >
-                                                                        <Plus className="h-4 w-4" />
-                                                                        <span>Buat Barang Baru: "{item.name}"</span>
+                                                                {item.name.trim().length > 0 && suggestions.length === 0 && (
+                                                                    <div className="flex items-center gap-1.5 px-2.5 py-2.5 text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/10 font-semibold border-t mt-1">
+                                                                        <span>✨ Barang baru terdeteksi. Tekan Tab/Enter untuk mengisi detail barang.</span>
                                                                     </div>
                                                                 )}
                                                                 
@@ -485,18 +683,86 @@ export default function InboundCreate({ suppliers, warehouses, products, categor
                                                             </div>
                                                         )}
                                                     </TableCell>
+                                                    <TableCell className="p-2 text-center">
+                                                        {item.product_id > 0 ? (
+                                                            <span className="font-semibold text-muted-foreground uppercase">{item.symbol || 'pcs'}</span>
+                                                        ) : (
+                                                            <select
+                                                                id={`unit-select-${idx}`}
+                                                                value={item.unit_id || ''}
+                                                                onChange={(e) => {
+                                                                    const u = units.find(unit => String(unit.id) === e.target.value);
+                                                                    setData('items', data.items.map((it, i) =>
+                                                                        i === idx ? { ...it, unit_id: e.target.value, symbol: u?.symbol || '' } : it
+                                                                    ));
+                                                                }}
+                                                                onKeyDown={(e) => handleGridKeyDown(idx, 'unit_id', e as any)}
+                                                                className="w-24 h-9 px-2 rounded-md border bg-background font-medium text-xs focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+                                                            >
+                                                                <option value="">Satuan</option>
+                                                                {units.map((u) => (
+                                                                    <option key={u.id} value={String(u.id)}>{u.symbol}</option>
+                                                                ))}
+                                                            </select>
+                                                        )}
+                                                    </TableCell>
                                                     <TableCell className="p-2">
-                                                        <div className="flex items-center gap-2">
+                                                        <Input
+                                                            id={`bast-input-${idx}`}
+                                                            type="text"
+                                                            placeholder="No. BAST..."
+                                                            value={item.bast_number}
+                                                            onChange={(e) => handleBastNumberChange(idx, e.target.value)}
+                                                            onKeyDown={(e) => handleGridKeyDown(idx, 'bast_number', e)}
+                                                            className="w-full h-9 focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-0 font-medium"
+                                                            autoComplete="off"
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell className="p-2">
+                                                        {item.product_id > 0 ? (
+                                                            <span className="text-muted-foreground text-sm">{categoryName}</span>
+                                                        ) : (
+                                                            <select
+                                                                id={`category-select-${idx}`}
+                                                                value={item.category_id || ''}
+                                                                onChange={(e) => handleItemFieldChange(idx, 'category_id', e.target.value)}
+                                                                onKeyDown={(e) => handleGridKeyDown(idx, 'category_id', e as any)}
+                                                                className="w-32 h-9 px-2 rounded-md border bg-background font-medium text-xs focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+                                                            >
+                                                                <option value="">Kategori</option>
+                                                                {categories.map((c) => (
+                                                                    <option key={c.id} value={String(c.id)}>{c.name}</option>
+                                                                ))}
+                                                            </select>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell className="p-2">
+                                                        {item.product_id > 0 ? (
+                                                            <span className="text-muted-foreground text-xs font-mono">{brandAndPkg}</span>
+                                                        ) : (
+                                                            <Input
+                                                                id={`brand-packaging-input-${idx}`}
+                                                                type="text"
+                                                                placeholder="Merk / Kemasan..."
+                                                                value={item.brand_packaging || ''}
+                                                                onChange={(e) => handleItemFieldChange(idx, 'brand_packaging', e.target.value)}
+                                                                onKeyDown={(e) => handleGridKeyDown(idx, 'brand_packaging', e)}
+                                                                className="w-full h-9 focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-0 text-xs font-mono"
+                                                                autoComplete="off"
+                                                            />
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell className="p-2">
+                                                        <div className="flex items-center justify-center gap-2">
                                                             <Input
                                                                 id={`qty-input-${idx}`}
                                                                 type="number"
                                                                 min={1}
                                                                 value={item.qty}
                                                                 onChange={(e) => handleQtyChange(idx, parseInt(e.target.value) || 1)}
-                                                                onKeyDown={(e) => handleQtyKeyDown(idx, e)}
+                                                                onKeyDown={(e) => handleGridKeyDown(idx, 'qty', e)}
                                                                 className="w-24 h-9 focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-0 text-center font-mono font-semibold"
                                                             />
-                                                            <span className="text-xs text-muted-foreground font-semibold uppercase">{item.symbol || 'pcs'}</span>
                                                         </div>
                                                     </TableCell>
                                                     <TableCell className="text-center p-2">
@@ -533,128 +799,6 @@ export default function InboundCreate({ suppliers, warehouses, products, categor
                 </form>
             </div>
 
-            {/* Modal for creating a new product inline */}
-            <Dialog open={isProductModalOpen} onOpenChange={setIsProductModalOpen}>
-                <DialogContent className="sm:max-w-[480px]">
-                    <DialogHeader>
-                        <DialogTitle>Buat Barang Baru</DialogTitle>
-                        <DialogDescription>
-                            Daftarkan barang baru secara cepat ke database master barang.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={handleSaveProduct} className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="grid gap-1.5">
-                                <Label htmlFor="new_sku">SKU</Label>
-                                <Input
-                                    id="new_sku"
-                                    value={newProduct.sku}
-                                    onChange={(e) => setNewProduct(prev => ({ ...prev, sku: e.target.value }))}
-                                    required
-                                />
-                                {productErrors.sku && <p className="text-[10px] text-red-500">{productErrors.sku}</p>}
-                            </div>
-                            <div className="grid gap-1.5">
-                                <Label htmlFor="new_code">Kode Barang</Label>
-                                <Input
-                                    id="new_code"
-                                    value={newProduct.code}
-                                    onChange={(e) => setNewProduct(prev => ({ ...prev, code: e.target.value }))}
-                                    required
-                                />
-                                {productErrors.code && <p className="text-[10px] text-red-500">{productErrors.code}</p>}
-                            </div>
-                        </div>
-
-                        <div className="grid gap-1.5">
-                            <Label htmlFor="new_name">Nama Barang</Label>
-                            <Input
-                                id="new_name"
-                                value={newProduct.name}
-                                onChange={(e) => setNewProduct(prev => ({ ...prev, name: e.target.value }))}
-                                placeholder="Contoh: Kertas HVS A4 80gr"
-                                required
-                            />
-                            {productErrors.name && <p className="text-[10px] text-red-500">{productErrors.name}</p>}
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="grid gap-1.5">
-                                <Label htmlFor="new_category_id">Kategori</Label>
-                                <Select
-                                    value={newProduct.category_id}
-                                    onValueChange={(val) => setNewProduct(prev => ({ ...prev, category_id: val }))}
-                                >
-                                    <SelectTrigger id="new_category_id">
-                                        <SelectValue placeholder="Pilih Kategori" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {categories.map((c) => (
-                                            <SelectItem key={c.id} value={String(c.id)}>
-                                                {c.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                {productErrors.category_id && <p className="text-[10px] text-red-500">{productErrors.category_id}</p>}
-                            </div>
-                            <div className="grid gap-1.5">
-                                <Label htmlFor="new_unit_id">Satuan</Label>
-                                <Select
-                                    value={newProduct.unit_id}
-                                    onValueChange={(val) => setNewProduct(prev => ({ ...prev, unit_id: val }))}
-                                >
-                                    <SelectTrigger id="new_unit_id">
-                                        <SelectValue placeholder="Pilih Satuan" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {units.map((u) => (
-                                            <SelectItem key={u.id} value={String(u.id)}>
-                                                {u.name} ({u.symbol})
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                {productErrors.unit_id && <p className="text-[10px] text-red-500">{productErrors.unit_id}</p>}
-                            </div>
-                        </div>
-
-                        <div className="grid gap-1.5">
-                            <Label htmlFor="new_minimum_stock">Stok Minimum</Label>
-                            <Input
-                                id="new_minimum_stock"
-                                type="number"
-                                min={0}
-                                value={newProduct.minimum_stock}
-                                onChange={(e) => setNewProduct(prev => ({ ...prev, minimum_stock: e.target.value }))}
-                                required
-                            />
-                            {productErrors.minimum_stock && <p className="text-[10px] text-red-500">{productErrors.minimum_stock}</p>}
-                        </div>
-
-                        <div className="grid gap-1.5">
-                            <Label htmlFor="new_description">Deskripsi (Opsional)</Label>
-                            <Textarea
-                                id="new_description"
-                                value={newProduct.description}
-                                onChange={(e) => setNewProduct(prev => ({ ...prev, description: e.target.value }))}
-                                placeholder="Spesifikasi atau deskripsi barang..."
-                                rows={2}
-                            />
-                            {productErrors.description && <p className="text-[10px] text-red-500">{productErrors.description}</p>}
-                        </div>
-
-                        <DialogFooter className="pt-4 border-t">
-                            <Button type="button" variant="outline" onClick={() => setIsProductModalOpen(false)} disabled={savingProduct}>
-                                Batal
-                            </Button>
-                            <Button type="submit" disabled={savingProduct}>
-                                {savingProduct ? 'Menyimpan...' : 'Simpan Produk'}
-                            </Button>
-                        </DialogFooter>
-                    </form>
-                </DialogContent>
-            </Dialog>
         </>
     );
 }

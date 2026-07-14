@@ -83,7 +83,7 @@ class InboundController extends Controller
         }
 
         $suppliers = Supplier::where('is_active', true)->orderBy('name')->get(['id', 'name']);
-        $products = Product::where('is_active', true)->where('is_hold', false)->orderBy('name')->get(['id', 'name', 'code', 'sku']);
+        $products = Product::with(['category', 'unit'])->where('is_active', true)->where('is_hold', false)->orderBy('name')->get();
         $categories = Category::orderBy('name')->get(['id', 'name']);
         $units = Unit::orderBy('name')->get(['id', 'name', 'symbol']);
 
@@ -116,8 +116,14 @@ class InboundController extends Controller
             'transaction_date' => 'required|date',
             'notes' => 'nullable|string',
             'items' => 'required|array|min:1',
-            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.product_id' => 'required|integer',
+            'items.*.name' => 'required|string|max:255',
             'items.*.qty' => 'required|integer|min:1',
+            'items.*.bast_number' => 'nullable|string|max:100',
+            'items.*.unit_id' => 'nullable|exists:units,id',
+            'items.*.category_id' => 'nullable|exists:categories,id',
+            'items.*.brand' => 'nullable|string|max:255',
+            'items.*.packaging' => 'nullable|string|max:255',
         ], [
             'transaction_number.unique' => 'Nomor transaksi sudah digunakan.',
             'items.required' => 'Minimal harus ada 1 barang yang dimasukkan.',
@@ -148,16 +154,40 @@ class InboundController extends Controller
 
             // 2. Loop items
             foreach ($validated['items'] as $item) {
+                $productId = $item['product_id'];
+
+                if ($productId === 0) {
+                    // Create new product on-the-fly
+                    $rand = rand(1000, 9999);
+                    $sku = 'SKU-' . substr(time(), -6) . '-' . $rand;
+                    $code = 'PRD-' . substr(time(), -6) . '-' . $rand;
+
+                    $product = \App\Models\Product::create([
+                        'category_id' => $item['category_id'],
+                        'unit_id' => $item['unit_id'],
+                        'sku' => $sku,
+                        'code' => $code,
+                        'name' => $item['name'],
+                        'brand' => $item['brand'] ?? null,
+                        'packaging' => $item['packaging'] ?? null,
+                        'minimum_stock' => 0,
+                        'is_active' => true,
+                        'is_hold' => false,
+                    ]);
+                    $productId = $product->id;
+                }
+
                 InboundItem::create([
                     'inbound_id' => $transaction->id,
-                    'product_id' => $item['product_id'],
+                    'product_id' => $productId,
+                    'bast_number' => $item['bast_number'] ?? null,
                     'qty' => $item['qty'],
                     'created_at' => now(),
                 ]);
 
                 // 3. Increment stock
                 $stock = Stock::where('warehouse_id', $validated['warehouse_id'])
-                    ->where('product_id', $item['product_id'])
+                    ->where('product_id', $productId)
                     ->first();
 
                 if ($stock) {
@@ -165,7 +195,7 @@ class InboundController extends Controller
                 } else {
                     Stock::create([
                         'warehouse_id' => $validated['warehouse_id'],
-                        'product_id' => $item['product_id'],
+                        'product_id' => $productId,
                         'qty' => $item['qty'],
                     ]);
                 }

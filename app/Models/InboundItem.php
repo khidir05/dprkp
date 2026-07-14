@@ -17,6 +17,7 @@ use Illuminate\Support\Carbon;
 #[Fillable([
     'inbound_id',
     'product_id',
+    'bast_number',
     'qty',
 ])]
 class InboundItem extends Model

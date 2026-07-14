@@ -22,7 +22,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['category_id', 'unit_id', 'sku', 'code', 'name', 'description', 'minimum_stock', 'is_active', 'is_hold'])]
+#[Fillable(['category_id', 'unit_id', 'sku', 'code', 'name', 'brand', 'packaging', 'description', 'minimum_stock', 'is_active', 'is_hold'])]
 class Product extends Model
 {
     /**

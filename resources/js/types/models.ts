@@ -64,4 +64,38 @@ export interface Product {
     updated_at: string;
     category?: Category;
     unit?: Unit;
+    brand?: string | null;
+    packaging?: string | null;
 }
+
+export interface InboundTransaction {
+    id: number;
+    supplier_id: number;
+    warehouse_id: number;
+    transaction_number: string;
+    reference_document: string | null;
+    transaction_date: string;
+    notes: string | null;
+    created_by: number;
+    created_at: string;
+    updated_at: string;
+    supplier?: Supplier;
+    warehouse?: Warehouse;
+    created_by_user?: { id: number; name: string };
+    created_by?: { id: number; name: string };
+    inbound_items?: InboundItem[];
+}
+
+export interface InboundItem {
+    id: number;
+    inbound_id: number;
+    product_id: number;
+    bast_number: string | null;
+    qty: number;
+    created_at: string;
+    product?: Product & {
+        category?: Category;
+        unit?: Unit;
+    };
+}
+

@@ -47,7 +47,7 @@ export default function InboundShow({ transaction }: Props) {
                     </Button>
                     <div>
                         <h1 className="text-2xl font-bold tracking-tight">Detail Barang Masuk</h1>
-                        <p className="text-muted-foreground font-mono text-sm">Nomor: {transaction.transaction_number}</p>
+                        <p className="text-muted-foreground font-mono text-sm">Nomor Transaksi: {transaction.transaction_number}</p>
                     </div>
                 </div>
 
@@ -133,6 +133,7 @@ export default function InboundShow({ transaction }: Props) {
                                             <TableRow>
                                                 <TableHead>Kode / SKU</TableHead>
                                                 <TableHead>Nama Barang</TableHead>
+                                                <TableHead>No. BAST</TableHead>
                                                 <TableHead>Kategori</TableHead>
                                                 <TableHead className="text-right">Jumlah</TableHead>
                                             </TableRow>
@@ -145,6 +146,7 @@ export default function InboundShow({ transaction }: Props) {
                                                         <div className="text-muted-foreground">{item.product?.sku}</div>
                                                     </TableCell>
                                                     <TableCell className="font-medium">{item.product?.name}</TableCell>
+                                                    <TableCell className="font-mono text-sm font-semibold">{item.bast_number || '-'}</TableCell>
                                                     <TableCell className="text-sm text-muted-foreground">
                                                         {item.product?.category?.name || '-'}
                                                     </TableCell>

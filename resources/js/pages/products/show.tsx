@@ -67,6 +67,14 @@ export default function ProductShow({ product, canManage }: Props) {
                                     <p className="mt-1 text-sm font-medium font-mono">{product.minimum_stock}</p>
                                 </div>
                                 <div>
+                                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Merk</h4>
+                                    <p className="mt-1 text-sm font-medium">{product.brand || '-'}</p>
+                                </div>
+                                <div>
+                                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Kemasan</h4>
+                                    <p className="mt-1 text-sm font-medium">{product.packaging || '-'}</p>
+                                </div>
+                                <div>
                                     <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status Keaktifan</h4>
                                     <div className="mt-1 flex gap-1.5">
                                         <Badge variant={product.is_active ? 'default' : 'secondary'}>

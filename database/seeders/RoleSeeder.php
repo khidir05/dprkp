@@ -43,6 +43,16 @@ class RoleSeeder extends Seeder
             ],
         ];
 
-        DB::table('roles')->insert($roles);
+        foreach ($roles as $role) {
+            DB::table('roles')->updateOrInsert(
+                ['code' => $role['code']],
+                [
+                    'nama' => $role['nama'],
+                    'label' => $role['label'],
+                    'description' => $role['description'],
+                    'created_at' => $role['created_at'],
+                ]
+            );
+        }
     }
 }

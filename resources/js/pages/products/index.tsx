@@ -38,6 +38,8 @@ export default function ProductsIndex({ products, categories, units, filters, ca
         sku: '',
         code: '',
         name: '',
+        brand: '',
+        packaging: '',
         description: '',
         minimum_stock: 0,
     });
@@ -85,6 +87,8 @@ export default function ProductsIndex({ products, categories, units, filters, ca
             sku: product.sku,
             code: product.code,
             name: product.name,
+            brand: product.brand || '',
+            packaging: product.packaging || '',
             description: product.description || '',
             minimum_stock: product.minimum_stock,
         });
@@ -166,7 +170,16 @@ export default function ProductsIndex({ products, categories, units, filters, ca
                                 <div className="text-xs text-muted-foreground font-mono">{product.sku}</div>
                                 <div className="text-sm font-semibold font-mono">{product.code}</div>
                             </td>
-                            <td className="p-4 font-medium">{product.name}</td>
+                            <td className="p-4 font-medium">
+                                <div>{product.name}</div>
+                                {(product.brand || product.packaging) && (
+                                    <div className="text-xs text-muted-foreground mt-0.5 font-normal">
+                                        {product.brand && <span>Merk: {product.brand}</span>}
+                                        {product.brand && product.packaging && <span className="mx-1.5">&bull;</span>}
+                                        {product.packaging && <span>Kemasan: {product.packaging}</span>}
+                                    </div>
+                                )}
+                            </td>
                             <td className="p-4 text-muted-foreground text-sm">{product.category?.name || '-'}</td>
                             <td className="p-4 text-sm">
                                 <Badge variant="secondary" className="font-normal">
@@ -279,7 +292,28 @@ export default function ProductsIndex({ products, categories, units, filters, ca
                                     />
                                     {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
                                 </div>
-
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="brand">Merk</Label>
+                                        <Input
+                                            id="brand"
+                                            value={data.brand}
+                                            onChange={(e) => setData('brand', e.target.value)}
+                                            placeholder="Contoh: Steadler, Sinar Dunia"
+                                        />
+                                        {errors.brand && <p className="text-xs text-red-500">{errors.brand}</p>}
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="packaging">Kemasan</Label>
+                                        <Input
+                                            id="packaging"
+                                            value={data.packaging}
+                                            onChange={(e) => setData('packaging', e.target.value)}
+                                            placeholder="Contoh: Rim, Pack, Box"
+                                        />
+                                        {errors.packaging && <p className="text-xs text-red-500">{errors.packaging}</p>}
+                                    </div>
+                                </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="grid gap-2">
                                         <Label htmlFor="category_id">Kategori</Label>
