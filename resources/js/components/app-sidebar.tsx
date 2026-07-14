@@ -124,37 +124,41 @@ export function AppSidebar() {
         );
     }
 
-    const masterItems: NavItem[] = [
-        {
-            title: 'Kategori',
-            href: '/categories',
-            icon: Tags,
-        },
-        {
-            title: 'Satuan',
-            href: '/units',
-            icon: Ruler,
-        },
-        {
-            title: 'Supplier',
-            href: '/suppliers',
-            icon: Truck,
-        },
-    ];
+    const masterItems: NavItem[] = [];
 
-    if (userRole !== 'admin_gudang') {
+    if (userRole !== 'pemohon') {
+        masterItems.push(
+            {
+                title: 'Kategori',
+                href: '/categories',
+                icon: Tags,
+            },
+            {
+                title: 'Satuan',
+                href: '/units',
+                icon: Ruler,
+            },
+            {
+                title: 'Supplier',
+                href: '/suppliers',
+                icon: Truck,
+            }
+        );
+
+        if (userRole !== 'admin_gudang') {
+            masterItems.push({
+                title: 'Gudang',
+                href: '/warehouses',
+                icon: Warehouse,
+            });
+        }
+
         masterItems.push({
-            title: 'Gudang',
-            href: '/warehouses',
-            icon: Warehouse,
+            title: 'Barang',
+            href: '/products',
+            icon: Package,
         });
     }
-
-    masterItems.push({
-        title: 'Barang',
-        href: '/products',
-        icon: Package,
-    });
 
     const adminItems: NavItem[] = [];
     if (userRole === 'super_admin') {
