@@ -30,7 +30,7 @@ class ItemRequestController extends Controller
             // Admin Gudang only sees requests for their assigned warehouses
             $assignedWarehouseIds = $user->warehouses()->pluck('warehouses.id');
             $query->whereIn('warehouse_id', $assignedWarehouseIds)
-                  ->whereIn('status', ['approved', 'completed']); // Gudang only sees approved/completed requests to prepare
+                  ->whereIn('status', ['approved', 'delivered', 'completed']); // Gudang sees approved, delivered, and completed requests
         }
 
         // Search & Status filters
@@ -68,7 +68,11 @@ class ItemRequestController extends Controller
         }
 
         $warehouses = Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'name', 'code']);
-        $products = Product::where('is_active', true)->where('is_hold', false)->orderBy('name')->get(['id', 'name', 'code', 'sku']);
+        $products = Product::with(['category', 'unit', 'stocks'])
+            ->where('is_active', true)
+            ->where('is_hold', false)
+            ->orderBy('name')
+            ->get();
 
         return Inertia::render('requests/create', [
             'warehouses' => $warehouses,

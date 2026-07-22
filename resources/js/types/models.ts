@@ -66,6 +66,12 @@ export interface Product {
     unit?: Unit;
     brand?: string | null;
     packaging?: string | null;
+    stocks?: Array<{
+        id: number;
+        warehouse_id: number;
+        product_id: number;
+        qty: number;
+    }>;
 }
 
 export interface InboundTransaction {

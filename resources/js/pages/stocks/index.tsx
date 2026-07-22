@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import DataTable from '@/components/data-table';
 import { Badge } from '@/components/ui/badge';
@@ -36,22 +36,17 @@ export default function StocksIndex({ stocks, warehouses, filters, role }: Props
     };
 
     const reloadPage = (searchVal: string, whVal: string) => {
-        const url = new URL(window.location.href);
-        if (searchVal) {
-            url.searchParams.set('search', searchVal);
-        } else {
-            url.searchParams.delete('search');
-        }
+        const params: any = {};
+        if (searchVal) params.search = searchVal;
+        if (whVal && whVal !== 'all') params.warehouse_id = whVal;
 
-        if (whVal && whVal !== 'all') {
-            url.searchParams.set('warehouse_id', whVal);
-        } else {
-            url.searchParams.delete('warehouse_id');
-        }
-
-        url.searchParams.delete('page');
-        window.location.href = url.pathname + url.search;
+        router.get('/stocks', params, {
+            preserveState: true,
+            replace: true
+        });
     };
+
+    const isPemohon = role === 'pemohon';
 
     return (
         <>
@@ -84,7 +79,10 @@ export default function StocksIndex({ stocks, warehouses, filters, role }: Props
                 </div>
 
                 <DataTable
-                    headers={['Gudang', 'Barang (SKU / Kode)', 'Kategori', 'Stok Saat Ini', 'Min. Stok', 'Status']}
+                    headers={isPemohon
+                        ? ['Gudang', 'Barang', 'Kategori', 'Stok Saat Ini']
+                        : ['Gudang', 'Barang (SKU / Kode)', 'Kategori', 'Stok Saat Ini', 'Min. Stok', 'Status']
+                    }
                     items={stocks.data}
                     searchQuery={search}
                     onSearchChange={handleSearchChange}
@@ -102,9 +100,11 @@ export default function StocksIndex({ stocks, warehouses, filters, role }: Props
                                 </td>
                                 <td className="p-4">
                                     <div className="font-medium">{product?.name || '-'}</div>
-                                    <div className="text-xs text-muted-foreground font-mono">
-                                        SKU: {product?.sku} &bull; Kode: {product?.code}
-                                    </div>
+                                    {!isPemohon && (
+                                        <div className="text-xs text-muted-foreground font-mono">
+                                            SKU: {product?.sku} &bull; Kode: {product?.code}
+                                        </div>
+                                    )}
                                 </td>
                                 <td className="p-4 text-muted-foreground text-sm">
                                     {product?.category?.name || '-'}
@@ -112,21 +112,25 @@ export default function StocksIndex({ stocks, warehouses, filters, role }: Props
                                 <td className="p-4 font-mono text-sm font-semibold">
                                     {stock.qty} {product?.unit?.symbol}
                                 </td>
-                                <td className="p-4 font-mono text-sm text-muted-foreground">
-                                    {product?.minimum_stock ?? 0} {product?.unit?.symbol}
-                                </td>
-                                <td className="p-4">
-                                    {isLowStock ? (
-                                        <Badge variant="destructive" className="gap-1.5 py-0.5">
-                                            <AlertTriangle className="h-3.5 w-3.5" />
-                                            <span>Stok Menipis</span>
-                                        </Badge>
-                                    ) : (
-                                        <Badge variant="default" className="bg-emerald-600 hover:bg-emerald-600 py-0.5">
-                                            Aman
-                                        </Badge>
-                                    )}
-                                </td>
+                                {!isPemohon && (
+                                    <td className="p-4 font-mono text-sm text-muted-foreground">
+                                        {product?.minimum_stock ?? 0} {product?.unit?.symbol}
+                                    </td>
+                                )}
+                                {!isPemohon && (
+                                    <td className="p-4">
+                                        {isLowStock ? (
+                                            <Badge variant="destructive" className="gap-1.5 py-0.5">
+                                                <AlertTriangle className="h-3.5 w-3.5" />
+                                                <span>Stok Menipis</span>
+                                            </Badge>
+                                        ) : (
+                                            <Badge variant="default" className="bg-emerald-600 hover:bg-emerald-600 py-0.5">
+                                                Aman
+                                            </Badge>
+                                        )}
+                                    </td>
+                                )}
                             </tr>
                         );
                     }}

@@ -58,11 +58,13 @@ export default function RequestsIndex({ requests, filters, role }: Props) {
             case 'pending':
                 return <Badge variant="outline" className="text-amber-600 bg-amber-50 border-amber-300">Menunggu Persetujuan</Badge>;
             case 'approved':
-                return <Badge variant="default" className="bg-blue-600 hover:bg-blue-600 text-white">Disetujui</Badge>;
+                return <Badge variant="default" className="bg-blue-600 hover:bg-blue-600 text-white">Diproses</Badge>;
             case 'rejected':
                 return <Badge variant="destructive">Ditolak</Badge>;
+            case 'delivered':
+                return <Badge variant="default" className="bg-indigo-600 hover:bg-indigo-600 text-white">Sampai</Badge>;
             case 'completed':
-                return <Badge variant="default" className="bg-emerald-600 hover:bg-emerald-600 text-white">Selesai / Terkirim</Badge>;
+                return <Badge variant="default" className="bg-emerald-600 hover:bg-emerald-600 text-white">Selesai</Badge>;
             default:
                 return <Badge variant="secondary">{status}</Badge>;
         }
@@ -87,7 +89,8 @@ export default function RequestsIndex({ requests, filters, role }: Props) {
                                 <SelectContent>
                                     <SelectItem value="all">Semua Status</SelectItem>
                                     <SelectItem value="pending">Menunggu</SelectItem>
-                                    <SelectItem value="approved">Disetujui</SelectItem>
+                                    <SelectItem value="approved">Diproses</SelectItem>
+                                    <SelectItem value="delivered">Sampai</SelectItem>
                                     <SelectItem value="rejected">Ditolak</SelectItem>
                                     <SelectItem value="completed">Selesai</SelectItem>
                                 </SelectContent>

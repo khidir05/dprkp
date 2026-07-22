@@ -151,11 +151,13 @@ export default function RequestShow({ itemRequest, role }: Props) {
             case 'pending':
                 return <Badge variant="outline" className="text-amber-600 bg-amber-50 border-amber-300">Menunggu Persetujuan</Badge>;
             case 'approved':
-                return <Badge variant="default" className="bg-blue-600 hover:bg-blue-600 text-white">Disetujui</Badge>;
+                return <Badge variant="default" className="bg-blue-600 hover:bg-blue-600 text-white">Diproses</Badge>;
             case 'rejected':
                 return <Badge variant="destructive">Ditolak</Badge>;
+            case 'delivered':
+                return <Badge variant="default" className="bg-indigo-600 hover:bg-indigo-600 text-white">Sampai</Badge>;
             case 'completed':
-                return <Badge variant="default" className="bg-emerald-600 hover:bg-emerald-600 text-white">Selesai / Terkirim</Badge>;
+                return <Badge variant="default" className="bg-emerald-600 hover:bg-emerald-600 text-white">Selesai</Badge>;
             default:
                 return <Badge variant="secondary">{status}</Badge>;
         }
@@ -213,7 +215,7 @@ export default function RequestShow({ itemRequest, role }: Props) {
                         )}
 
                         {/* Confirm receipt button for Pemohon */}
-                        {itemRequest.status === 'completed' && !itemRequest.goods_receipt && (role === 'pemohon' || role === 'super_admin') && (
+                        {itemRequest.status === 'delivered' && !itemRequest.goods_receipt && (role === 'pemohon' || role === 'super_admin') && (
                             <Button className="bg-emerald-600 hover:bg-emerald-700 gap-1.5" onClick={() => setIsReceiveOpen(true)}>
                                 <CheckCircle className="h-4 w-4" />
                                 <span>Konfirmasi Penerimaan</span>
@@ -235,7 +237,7 @@ export default function RequestShow({ itemRequest, role }: Props) {
                                     <Table>
                                         <TableHeader className="bg-muted/50">
                                             <TableRow>
-                                                <TableHead>SKU / Kode</TableHead>
+                                                {role !== 'pemohon' && <TableHead>SKU / Kode</TableHead>}
                                                 <TableHead>Nama Barang</TableHead>
                                                 {(role === 'manager' || role === 'admin_gudang' || role === 'super_admin') && (
                                                     <TableHead className="text-right">Stok Gudang</TableHead>
@@ -253,10 +255,12 @@ export default function RequestShow({ itemRequest, role }: Props) {
 
                                                 return (
                                                     <TableRow key={item.id}>
-                                                        <TableCell className="font-mono text-xs">
-                                                            <div>{product?.code}</div>
-                                                            <div className="text-muted-foreground">{product?.sku}</div>
-                                                        </TableCell>
+                                                        {role !== 'pemohon' && (
+                                                            <TableCell className="font-mono text-xs">
+                                                                <div>{product?.code}</div>
+                                                                <div className="text-muted-foreground">{product?.sku}</div>
+                                                            </TableCell>
+                                                        )}
                                                         <TableCell className="font-medium">{product?.name}</TableCell>
                                                         {(role === 'manager' || role === 'admin_gudang' || role === 'super_admin') && (
                                                             <TableCell className="text-right font-mono">

@@ -38,6 +38,18 @@ export default function RequestCreate({ warehouses, products }: Props) {
     const [selectedProductId, setSelectedProductId] = useState('');
     const [itemQty, setItemQty] = useState(1);
 
+    const getProductStock = (product: Product, warehouseId: string) => {
+        if (!warehouseId) return 0;
+        const stock = product.stocks?.find((s: any) => String(s.warehouse_id) === String(warehouseId));
+        return stock ? stock.qty : 0;
+    };
+
+    const filteredProducts = products.filter((p) => {
+        if (!data.warehouse_id) return false;
+        const stockQty = getProductStock(p, data.warehouse_id);
+        return stockQty > 0;
+    });
+
     const handleAddItem = () => {
         if (!selectedProductId) {
             toast.error('Pilih barang terlebih dahulu.');
@@ -51,12 +63,23 @@ export default function RequestCreate({ warehouses, products }: Props) {
         const product = products.find((p) => p.id === parseInt(selectedProductId));
         if (!product) return;
 
+        const stockQty = getProductStock(product, data.warehouse_id);
+        if (itemQty > stockQty) {
+            toast.error(`Kuantitas yang diminta (${itemQty}) melebihi stok yang tersedia (${stockQty}).`);
+            return;
+        }
+
         // Check if already in list
         const exists = data.items.find((item) => item.product_id === product.id);
         if (exists) {
+            const newQty = exists.qty_requested + itemQty;
+            if (newQty > stockQty) {
+                toast.error(`Kuantitas total yang diminta (${newQty}) melebihi stok yang tersedia (${stockQty}).`);
+                return;
+            }
             setData('items', data.items.map((item) =>
                 item.product_id === product.id
-                    ? { ...item, qty_requested: item.qty_requested + itemQty }
+                    ? { ...item, qty_requested: newQty }
                     : item
             ));
             toast.success(`Jumlah permintaan "${product.name}" berhasil diupdate.`);
@@ -121,7 +144,22 @@ export default function RequestCreate({ warehouses, products }: Props) {
                                     <Label htmlFor="warehouse_id">Target Gudang Tujuan</Label>
                                     <Select
                                         value={data.warehouse_id}
-                                        onValueChange={(val) => setData('warehouse_id', val)}
+                                        onValueChange={(val) => {
+                                             if (data.items.length > 0) {
+                                                 if (confirm('Mengubah gudang sasaran akan mengosongkan daftar barang pilihan Anda. Apakah Anda yakin?')) {
+                                                     setData({
+                                                         ...data,
+                                                         warehouse_id: val,
+                                                         items: []
+                                                     });
+                                                     setSelectedProductId('');
+                                                     toast.info('Daftar barang pengajuan telah dikosongkan.');
+                                                 }
+                                             } else {
+                                                 setData('warehouse_id', val);
+                                                 setSelectedProductId('');
+                                             }
+                                        }}
                                     >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Pilih Gudang Sasaran" />
@@ -163,7 +201,6 @@ export default function RequestCreate({ warehouses, products }: Props) {
                                         <Table>
                                             <TableHeader className="bg-muted/50">
                                                 <TableRow>
-                                                    <TableHead>Kode / SKU</TableHead>
                                                     <TableHead>Nama Barang</TableHead>
                                                     <TableHead className="text-right">Jumlah Diajukan</TableHead>
                                                     <TableHead className="w-[80px]"></TableHead>
@@ -172,10 +209,6 @@ export default function RequestCreate({ warehouses, products }: Props) {
                                             <TableBody>
                                                 {data.items.map((item, idx) => (
                                                     <TableRow key={idx}>
-                                                        <TableCell className="font-mono text-xs">
-                                                            <div>{item.code}</div>
-                                                            <div className="text-muted-foreground">{item.sku}</div>
-                                                        </TableCell>
                                                         <TableCell className="font-medium">{item.name}</TableCell>
                                                         <TableCell className="text-right font-mono font-semibold">
                                                             {item.qty_requested} {item.symbol}
@@ -226,16 +259,20 @@ export default function RequestCreate({ warehouses, products }: Props) {
                                     <Select
                                         value={selectedProductId}
                                         onValueChange={setSelectedProductId}
+                                        disabled={!data.warehouse_id}
                                     >
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Pilih Produk" />
+                                            <SelectValue placeholder={data.warehouse_id ? "Pilih Produk" : "Pilih Gudang Sasaran terlebih dahulu"} />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {products.map((p) => (
-                                                <SelectItem key={p.id} value={String(p.id)}>
-                                                    {p.name} ({p.code})
-                                                </SelectItem>
-                                            ))}
+                                            {filteredProducts.map((p) => {
+                                                const stockQty = getProductStock(p, data.warehouse_id);
+                                                return (
+                                                    <SelectItem key={p.id} value={String(p.id)}>
+                                                        {p.name} - Kategori: {p.category?.name || 'Umum'} (Stok: {stockQty} {p.unit?.symbol || 'pcs'})
+                                                    </SelectItem>
+                                                );
+                                            })}
                                         </SelectContent>
                                     </Select>
                                 </div>

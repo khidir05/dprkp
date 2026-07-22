@@ -100,9 +100,9 @@ class OutboundController extends Controller
                 }
             }
 
-            // Update request status to completed (dispatched)
+            // Update request status to delivered (dispatched / sampai)
             $itemRequest->update([
-                'status' => 'completed',
+                'status' => 'delivered',
             ]);
         });
 

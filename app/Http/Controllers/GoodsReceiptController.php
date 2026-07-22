@@ -19,9 +19,9 @@ class GoodsReceiptController extends Controller
             abort(403, 'Hanya pemohon asli yang mengajukan barang yang dapat mengonfirmasi penerimaan.');
         }
 
-        if ($itemRequest->status !== 'completed') {
+        if ($itemRequest->status !== 'delivered') {
             return redirect()->route('requests.show', $itemRequest->id)
-                ->with('error', 'Hanya permintaan dengan status Completed / Sudah Dikirim yang dapat dikonfirmasi penerimaannya.');
+                ->with('error', 'Hanya permintaan dengan status Sampai yang dapat dikonfirmasi penerimaannya.');
         }
 
         if ($itemRequest->goodsReceipt()->exists()) {
@@ -29,13 +29,19 @@ class GoodsReceiptController extends Controller
                 ->with('error', 'Penerimaan barang untuk permintaan ini sudah dikonfirmasi sebelumnya.');
         }
 
-        GoodsReceipt::create([
-            'request_id' => $itemRequest->id,
-            'received_by' => $user->id,
-            'received_at' => now(),
-            'notes' => $request->input('notes') ?? null,
-            'created_at' => now(),
-        ]);
+        \Illuminate\Support\Facades\DB::transaction(function() use ($itemRequest, $user, $request) {
+            GoodsReceipt::create([
+                'request_id' => $itemRequest->id,
+                'received_by' => $user->id,
+                'received_at' => now(),
+                'notes' => $request->input('notes') ?? null,
+                'created_at' => now(),
+            ]);
+
+            $itemRequest->update([
+                'status' => 'completed',
+            ]);
+        });
 
         return redirect()->route('requests.show', $itemRequest->id)
             ->with('success', 'Konfirmasi penerimaan barang berhasil disimpan.');

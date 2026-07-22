@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +21,9 @@ type Props = {
 };
 
 export default function ProductShow({ product, canManage }: Props) {
+    const { auth } = usePage().props as any;
+    const userRole = auth.user?.role_model?.code;
+    const isPemohon = userRole === 'pemohon';
     return (
         <>
             <Head title={`Detail Barang - ${product.name}`} />
@@ -33,7 +36,9 @@ export default function ProductShow({ product, canManage }: Props) {
                     </Button>
                     <div>
                         <h1 className="text-2xl font-bold tracking-tight">{product.name}</h1>
-                        <p className="text-muted-foreground font-mono text-sm">SKU: {product.sku} &bull; Kode: {product.code}</p>
+                        {!isPemohon && (
+                            <p className="text-muted-foreground font-mono text-sm">SKU: {product.sku} &bull; Kode: {product.code}</p>
+                        )}
                     </div>
                 </div>
 
@@ -62,10 +67,12 @@ export default function ProductShow({ product, canManage }: Props) {
                                         </Badge>
                                     </p>
                                 </div>
-                                <div>
-                                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Stok Minimum</h4>
-                                    <p className="mt-1 text-sm font-medium font-mono">{product.minimum_stock}</p>
-                                </div>
+                                {!isPemohon && (
+                                    <div>
+                                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Stok Minimum</h4>
+                                        <p className="mt-1 text-sm font-medium font-mono">{product.minimum_stock}</p>
+                                    </div>
+                                )}
                                 <div>
                                     <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Merk</h4>
                                     <p className="mt-1 text-sm font-medium">{product.brand || '-'}</p>
@@ -74,17 +81,19 @@ export default function ProductShow({ product, canManage }: Props) {
                                     <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Kemasan</h4>
                                     <p className="mt-1 text-sm font-medium">{product.packaging || '-'}</p>
                                 </div>
-                                <div>
-                                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status Keaktifan</h4>
-                                    <div className="mt-1 flex gap-1.5">
-                                        <Badge variant={product.is_active ? 'default' : 'secondary'}>
-                                            {product.is_active ? 'Aktif' : 'Non-aktif'}
-                                        </Badge>
-                                        {product.is_hold && (
-                                            <Badge variant="destructive">Ditangguhkan</Badge>
-                                        )}
+                                {!isPemohon && (
+                                    <div>
+                                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status Keaktifan</h4>
+                                        <div className="mt-1 flex gap-1.5">
+                                            <Badge variant={product.is_active ? 'default' : 'secondary'}>
+                                                {product.is_active ? 'Aktif' : 'Non-aktif'}
+                                            </Badge>
+                                            {product.is_hold && (
+                                                <Badge variant="destructive">Ditangguhkan</Badge>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
+                                )}
                                 <div>
                                     <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Stok Tersedia</h4>
                                     <p className="mt-1 text-sm font-bold font-mono text-emerald-600 dark:text-emerald-400">

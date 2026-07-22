@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Head, useForm, router, Link } from '@inertiajs/react';
+import { Head, useForm, router, Link, usePage } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import DataTable from '@/components/data-table';
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,10 @@ type Props = {
 };
 
 export default function ProductsIndex({ products, categories, units, filters, canManage }: Props) {
+    const { auth } = usePage().props as any;
+    const userRole = auth.user?.role_model?.code;
+    const isPemohon = userRole === 'pemohon';
+
     const [search, setSearch] = useState(filters.search || '');
     const [selectedCategoryId, setSelectedCategoryId] = useState(filters.category_id || 'all');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -156,7 +160,10 @@ export default function ProductsIndex({ products, categories, units, filters, ca
                 </div>
 
                 <DataTable
-                    headers={['SKU / Kode', 'Nama Barang', 'Kategori', 'Satuan', 'Min. Stok', 'Total Stok', 'Status', 'Aksi']}
+                    headers={isPemohon 
+                        ? ['Nama Barang', 'Kategori', 'Satuan', 'Total Stok', 'Aksi']
+                        : ['SKU / Kode', 'Nama Barang', 'Kategori', 'Satuan', 'Min. Stok', 'Total Stok', 'Status', 'Aksi']
+                    }
                     items={products.data}
                     searchQuery={search}
                     onSearchChange={handleSearchChange}
@@ -166,10 +173,12 @@ export default function ProductsIndex({ products, categories, units, filters, ca
                     paginationLinks={products.links}
                     renderRow={(product, idx) => (
                         <tr key={product.id} className="border-b transition-colors hover:bg-muted/50">
-                            <td className="p-4">
-                                <div className="text-xs text-muted-foreground font-mono">{product.sku}</div>
-                                <div className="text-sm font-semibold font-mono">{product.code}</div>
-                            </td>
+                            {!isPemohon && (
+                                <td className="p-4">
+                                    <div className="text-xs text-muted-foreground font-mono">{product.sku}</div>
+                                    <div className="text-sm font-semibold font-mono">{product.code}</div>
+                                </td>
+                            )}
                             <td className="p-4 font-medium">
                                 <div>{product.name}</div>
                                 {(product.brand || product.packaging) && (
@@ -186,22 +195,24 @@ export default function ProductsIndex({ products, categories, units, filters, ca
                                     {product.unit?.symbol || '-'}
                                 </Badge>
                             </td>
-                            <td className="p-4 text-center font-mono text-sm">{product.minimum_stock}</td>
+                            {!isPemohon && <td className="p-4 text-center font-mono text-sm">{product.minimum_stock}</td>}
                             <td className="p-4 text-center font-mono text-sm font-semibold">
                                 {product.total_stock ?? 0}
                             </td>
-                            <td className="p-4 space-y-1">
-                                <div className="flex flex-col gap-1 items-start">
-                                    <Badge variant={product.is_active ? 'default' : 'secondary'} className="text-xs">
-                                        {product.is_active ? 'Aktif' : 'Non-aktif'}
-                                    </Badge>
-                                    {product.is_hold && (
-                                        <Badge variant="destructive" className="text-xs">
-                                            Ditangguhkan
+                            {!isPemohon && (
+                                <td className="p-4 space-y-1">
+                                    <div className="flex flex-col gap-1 items-start">
+                                        <Badge variant={product.is_active ? 'default' : 'secondary'} className="text-xs">
+                                            {product.is_active ? 'Aktif' : 'Non-aktif'}
                                         </Badge>
-                                    )}
-                                </div>
-                            </td>
+                                        {product.is_hold && (
+                                            <Badge variant="destructive" className="text-xs">
+                                                Ditangguhkan
+                                            </Badge>
+                                        )}
+                                    </div>
+                                </td>
+                            )}
                             <td className="p-4">
                                 <div className="flex gap-1.5">
                                     <Button asChild variant="outline" size="icon" className="h-8 w-8 text-neutral-600">
