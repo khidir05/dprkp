@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import DataTable from '@/components/data-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Eye, Plus, ArrowRightLeft } from 'lucide-react';
+import { Eye, Plus, ArrowRightLeft, Calendar } from 'lucide-react';
 import type { StockMutation } from '@/types';
 
 type Props = {
@@ -17,6 +17,8 @@ type Props = {
     filters: {
         search?: string;
         status?: string;
+        start_date?: string;
+        end_date?: string;
     };
     role: string;
 };
@@ -24,33 +26,40 @@ type Props = {
 export default function MutationsIndex({ mutations, filters, role }: Props) {
     const [search, setSearch] = useState(filters.search || '');
     const [selectedStatus, setSelectedStatus] = useState(filters.status || 'all');
+    const [startDate, setStartDate] = useState(filters.start_date || '');
+    const [endDate, setEndDate] = useState(filters.end_date || '');
 
     const handleSearchChange = (val: string) => {
         setSearch(val);
-        reloadPage(val, selectedStatus);
+        reloadPage(val, selectedStatus, startDate, endDate);
     };
 
     const handleStatusFilterChange = (val: string) => {
         setSelectedStatus(val);
-        reloadPage(search, val);
+        reloadPage(search, val, startDate, endDate);
     };
 
-    const reloadPage = (searchVal: string, statusVal: string) => {
-        const url = new URL(window.location.href);
-        if (searchVal) {
-            url.searchParams.set('search', searchVal);
-        } else {
-            url.searchParams.delete('search');
-        }
+    const handleStartDateChange = (val: string) => {
+        setStartDate(val);
+        reloadPage(search, selectedStatus, val, endDate);
+    };
 
-        if (statusVal && statusVal !== 'all') {
-            url.searchParams.set('status', statusVal);
-        } else {
-            url.searchParams.delete('status');
-        }
+    const handleEndDateChange = (val: string) => {
+        setEndDate(val);
+        reloadPage(search, selectedStatus, startDate, val);
+    };
 
-        url.searchParams.delete('page');
-        window.location.href = url.pathname + url.search;
+    const reloadPage = (searchVal: string, statusVal: string, startVal: string, endVal: string) => {
+        const params: any = {};
+        if (searchVal) params.search = searchVal;
+        if (statusVal && statusVal !== 'all') params.status = statusVal;
+        if (startVal) params.start_date = startVal;
+        if (endVal) params.end_date = endVal;
+
+        router.get('/mutations', params, {
+            preserveState: true,
+            replace: true
+        });
     };
 
     const getStatusBadge = (status: string) => {
@@ -77,6 +86,28 @@ export default function MutationsIndex({ mutations, filters, role }: Props) {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex items-center gap-2">
+                            <div className="relative">
+                                <input
+                                    type="date"
+                                    value={startDate}
+                                    onChange={(e) => handleStartDateChange(e.target.value)}
+                                    className="h-9 w-36 rounded-xl border border-neutral-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs px-3 focus:outline-none focus:ring-1 focus:ring-indigo-500 pl-8 text-neutral-800 dark:text-neutral-200"
+                                />
+                                <Calendar className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                            </div>
+                            <span className="text-xs text-muted-foreground font-medium">s/d</span>
+                            <div className="relative">
+                                <input
+                                    type="date"
+                                    value={endDate}
+                                    onChange={(e) => handleEndDateChange(e.target.value)}
+                                    className="h-9 w-36 rounded-xl border border-neutral-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs px-3 focus:outline-none focus:ring-1 focus:ring-indigo-500 pl-8 text-neutral-800 dark:text-neutral-200"
+                                />
+                                <Calendar className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                            </div>
+                        </div>
+
                         <div className="w-44">
                             <Select value={selectedStatus} onValueChange={handleStatusFilterChange}>
                                 <SelectTrigger className="h-9">

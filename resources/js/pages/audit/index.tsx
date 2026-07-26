@@ -71,7 +71,7 @@ export default function AuditLogsIndex({ logs, modules, filters }: Props) {
                 return <Badge className="bg-sky-100 text-sky-800 border-sky-200 dark:bg-sky-950 dark:text-sky-300 hover:bg-sky-100 py-0.5 font-medium">{module}</Badge>;
             case 'Master Data':
                 return <Badge className="bg-violet-100 text-violet-800 border-violet-200 dark:bg-violet-950 dark:text-violet-300 hover:bg-violet-100 py-0.5 font-medium">{module}</Badge>;
-            case 'Permintaan Barang':
+            case 'Pengajuan Barang':
                 return <Badge className="bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950 dark:text-amber-300 hover:bg-amber-100 py-0.5 font-medium">{module}</Badge>;
             case 'Barang Masuk':
                 return <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 hover:bg-emerald-100 py-0.5 font-medium">{module}</Badge>;

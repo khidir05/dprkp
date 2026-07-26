@@ -83,17 +83,17 @@ export default function Dashboard({ stats, role }: Props) {
                     <div className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-2xl p-6 shadow-sm">
                         <div className="flex justify-between items-center mb-6">
                             <div>
-                                <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Permintaan Barang Terbaru</h2>
+                                <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Pengajuan Barang Terbaru</h2>
                                 <p className="text-xs text-muted-foreground">5 transaksi permohonan barang teraktual masuk.</p>
                             </div>
                             <Link href="/requests" className="text-indigo-600 text-xs font-semibold hover:underline flex items-center gap-0.5">
-                                <span>Semua Permintaan</span>
+                                <span>Semua Pengajuan</span>
                                 <ChevronRight className="h-3 w-3" />
                             </Link>
                         </div>
                         <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
                             {stats.recent_requests.length === 0 ? (
-                                <div className="text-center py-6 text-sm text-muted-foreground">Tidak ada permintaan.</div>
+                                <div className="text-center py-6 text-sm text-muted-foreground">Tidak ada pengajuan.</div>
                             ) : (
                                 stats.recent_requests.map((req: any) => (
                                     <div key={req.id} className="py-3 flex justify-between items-center text-sm gap-4">
@@ -171,7 +171,7 @@ export default function Dashboard({ stats, role }: Props) {
                             <ClipboardList className="h-24 w-24" />
                         </div>
                         <ClipboardList className="h-8 w-8 mb-4 bg-white/20 p-1.5 rounded-lg" />
-                        <div className="text-sm font-medium text-rose-100">Pending Permintaan</div>
+                        <div className="text-sm font-medium text-rose-100">Pending Pengajuan</div>
                         <div className="text-3xl font-bold mt-1">{stats.pending_requests_count}</div>
                     </div>
 
@@ -208,7 +208,7 @@ export default function Dashboard({ stats, role }: Props) {
                     <div className="lg:col-span-2 bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-2xl p-6 shadow-sm">
                         <div className="flex justify-between items-center mb-6">
                             <div>
-                                <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Permintaan Menunggu Persetujuan</h2>
+                                <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Pengajuan Menunggu Persetujuan</h2>
                                 <p className="text-xs text-muted-foreground">Segera tinjau permohonan barang yang diajukan pemohon.</p>
                             </div>
                             <Link href="/requests?status=pending" className="text-indigo-600 text-xs font-semibold hover:underline flex items-center gap-0.5">
@@ -244,7 +244,7 @@ export default function Dashboard({ stats, role }: Props) {
 
                     {/* CSS bar chart of Monthly Request Trend */}
                     <div className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-2xl p-6 shadow-sm flex flex-col">
-                        <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">Tren Permintaan</h2>
+                        <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">Tren Pengajuan</h2>
                         <p className="text-xs text-muted-foreground mb-6">Jumlah pengajuan permohonan barang 6 bulan terakhir.</p>
                         
                         <div className="flex-1 flex items-end justify-between h-48 gap-3 px-2 pt-6">
@@ -392,7 +392,7 @@ export default function Dashboard({ stats, role }: Props) {
                                 <p className="text-xs text-muted-foreground">Pengiriman keluar terbaru dari gudang kelolaan.</p>
                             </div>
                             <Link href="/requests" className="text-indigo-600 text-xs font-semibold hover:underline flex items-center gap-0.5">
-                                <span>Lihat Permintaan</span>
+                                <span>Lihat Pengajuan</span>
                                 <ChevronRight className="h-3 w-3" />
                             </Link>
                         </div>

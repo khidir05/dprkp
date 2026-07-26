@@ -71,7 +71,7 @@ export function AppSidebar() {
             icon: Boxes,
         },
         {
-            title: 'Permintaan Barang',
+            title: 'Pengajuan Barang',
             href: '/requests',
             icon: ClipboardList,
         },

@@ -28,7 +28,7 @@ type WarehouseType = {
 };
 
 type Props = {
-    type: 'stock' | 'inbound' | 'outbound' | 'mutation' | 'request';
+    type: 'stock' | 'inbound' | 'outbound' | 'outbound_monthly' | 'mutation' | 'request';
     start_date: string;
     end_date: string;
     warehouse_id: string;
@@ -52,24 +52,48 @@ export default function ReportsIndex({
     const [selectedWarehouseId, setSelectedWarehouseId] = useState(warehouse_id);
     const [processing, setProcessing] = useState(false);
 
-    const handleFilterSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
+    const applyFilters = (newType: string, newWh: string, newStart: string, newEnd: string) => {
         setProcessing(true);
-
         const data: any = {
-            type: reportType,
-            warehouse_id: selectedWarehouseId,
+            type: newType,
+            warehouse_id: newWh,
         };
 
-        if (reportType !== 'stock') {
-            data.start_date = startDate;
-            data.end_date = endDate;
+        if (newType !== 'stock') {
+            data.start_date = newStart;
+            data.end_date = newEnd;
         }
 
         router.get('/reports', data, {
             preserveState: true,
+            replace: true,
             onFinish: () => setProcessing(false),
         });
+    };
+
+    const handleTypeChange = (newType: any) => {
+        setReportType(newType);
+        applyFilters(newType, selectedWarehouseId, startDate, endDate);
+    };
+
+    const handleWarehouseChange = (newWh: string) => {
+        setSelectedWarehouseId(newWh);
+        applyFilters(reportType, newWh, startDate, endDate);
+    };
+
+    const handleStartDateChange = (newStart: string) => {
+        setStartDate(newStart);
+        applyFilters(reportType, selectedWarehouseId, newStart, endDate);
+    };
+
+    const handleEndDateChange = (newEnd: string) => {
+        setEndDate(newEnd);
+        applyFilters(reportType, selectedWarehouseId, startDate, newEnd);
+    };
+
+    const handleFilterSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        applyFilters(reportType, selectedWarehouseId, startDate, endDate);
     };
 
     const getStatusBadge = (status: string) => {
@@ -89,6 +113,106 @@ export default function ReportsIndex({
             default:
                 return <Badge variant="outline">{status}</Badge>;
         }
+    };
+
+    const exportToExcel = () => {
+        let headers: string[] = [];
+        let rows: any[][] = [];
+        let filename = `laporan-${type}-${new Date().toISOString().slice(0, 10)}`;
+
+        if (type === 'stock') {
+            headers = ['No', 'Gudang', 'Nama Barang', 'SKU', 'Kode', 'Kategori', 'Stok Kuantitas'];
+            rows = reportData.map((row, idx) => [
+                idx + 1,
+                row.warehouse?.name || '-',
+                row.product?.name || '-',
+                row.product?.sku || '-',
+                row.product?.code || '-',
+                row.product?.category?.name || '-',
+                `${row.qty} ${row.product?.unit?.symbol || ''}`
+            ]);
+        } else if (type === 'inbound') {
+            headers = ['No', 'No. Inbound', 'Supplier', 'Gudang', 'Pencatat', 'Detail Barang', 'Tanggal Inbound'];
+            rows = reportData.map((row, idx) => {
+                const itemsStr = row.inbound_items?.map((i: any) => `${i.product?.name || ''} (${i.qty} ${i.product?.unit?.symbol || ''})`).join('; ') || '-';
+                return [
+                    idx + 1,
+                    row.transaction_number,
+                    row.supplier?.name || '-',
+                    row.warehouse?.name || '-',
+                    row.created_by_user?.name || '-',
+                    itemsStr,
+                    new Date(row.transaction_date).toLocaleDateString('id-ID')
+                ];
+            });
+        } else if (type === 'outbound') {
+            headers = ['No', 'No. Outbound', 'Penerima', 'Gudang', 'Petugas Dispatch', 'Detail Barang', 'Tanggal Outbound'];
+            rows = reportData.map((row, idx) => {
+                const itemsStr = row.outbound_items?.map((i: any) => `${i.product?.name || ''} (${i.qty} ${i.product?.unit?.symbol || ''})`).join('; ') || '-';
+                return [
+                    idx + 1,
+                    row.transaction_number,
+                    row.item_request?.requester?.name || '-',
+                    row.warehouse?.name || '-',
+                    row.created_by_user?.name || '-',
+                    itemsStr,
+                    new Date(row.transaction_date).toLocaleDateString('id-ID')
+                ];
+            });
+        } else if (type === 'outbound_monthly') {
+            headers = ['No', 'Bulan', 'Gudang', 'Nama Barang', 'SKU', 'Kode', 'Kategori', 'Total Keluar'];
+            rows = reportData.map((row, idx) => [
+                idx + 1,
+                row.month_name,
+                row.warehouse_name || '-',
+                row.product_name,
+                row.product_sku,
+                row.product_code,
+                row.category_name,
+                `${row.total_qty} ${row.unit_symbol}`
+            ]);
+        } else if (type === 'mutation') {
+            headers = ['No', 'No. Mutasi', 'Gudang Asal', 'Gudang Tujuan', 'Nama Barang', 'Jumlah', 'Tanggal Mutasi', 'Status'];
+            rows = reportData.map((row, idx) => [
+                idx + 1,
+                row.mutation_number,
+                row.source_warehouse?.name || '-',
+                row.destination_warehouse?.name || '-',
+                row.product?.name || '-',
+                `${row.qty} ${row.product?.unit?.symbol || ''}`,
+                new Date(row.created_at).toLocaleDateString('id-ID'),
+                row.status
+            ]);
+        } else if (type === 'request') {
+            headers = ['No', 'No. Pengajuan', 'Pemohon', 'Gudang Target', 'Detail Barang', 'Status', 'Tanggal'];
+            rows = reportData.map((row, idx) => {
+                const itemsStr = row.request_items?.map((i: any) => `${i.product?.name || ''} (${i.qty_requested} ${i.product?.unit?.symbol || ''})`).join('; ') || '-';
+                return [
+                    idx + 1,
+                    row.request_number,
+                    row.requester?.name || '-',
+                    row.warehouse?.name || '-',
+                    itemsStr,
+                    row.status,
+                    new Date(row.created_at).toLocaleDateString('id-ID')
+                ];
+            });
+        }
+
+        // Convert to CSV
+        const csvContent = "\uFEFF" + [
+            headers.join(','),
+            ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `${filename}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     // Calculate dynamic stats summary for the cards
@@ -123,6 +247,14 @@ export default function ReportsIndex({
                 title2: "Total Barang Keluar",
                 val2: `${totalItems} unit`
             };
+        } else if (type === 'outbound_monthly') {
+            const totalQty = reportData.reduce((sum, item) => sum + (item.total_qty || 0), 0);
+            return {
+                title1: "Total Jenis Produk Keluar",
+                val1: new Set(reportData.map(i => i.product_id)).size,
+                title2: "Total Kuantitas Keluar",
+                val2: `${totalQty} unit`
+            };
         } else if (type === 'mutation') {
             const totalQty = reportData.reduce((sum, item) => sum + (item.qty || 0), 0);
             return {
@@ -133,7 +265,7 @@ export default function ReportsIndex({
             };
         } else {
             return {
-                title1: "Total Permintaan Masuk",
+                title1: "Total Pengajuan Masuk",
                 val1: reportData.length,
                 title2: "Selesai / Sempurna",
                 val2: reportData.filter(r => r.status === 'completed').length
@@ -146,6 +278,39 @@ export default function ReportsIndex({
     return (
         <>
             <Head title="Laporan Inventaris & Transaksi" />
+            <style dangerouslySetInnerHTML={{__html: `
+                @media print {
+                    aside, nav, header, form, button, .print\\:hidden, [role="button"], .print-hidden-button {
+                        display: none !important;
+                    }
+                    body {
+                        background: white !important;
+                        color: black !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                    }
+                    .max-w-7xl, main, .p-6, .space-y-6 {
+                        max-width: 100% !important;
+                        width: 100% !important;
+                        padding: 0 !important;
+                        margin: 0 !important;
+                    }
+                    .bg-white, .dark\\:bg-zinc-900 {
+                        background: transparent !important;
+                        border: none !important;
+                        box-shadow: none !important;
+                        padding: 0 !important;
+                    }
+                    table {
+                        border-collapse: collapse !important;
+                        width: 100% !important;
+                    }
+                    th, td {
+                        border: 1px solid #ddd !important;
+                        padding: 8px !important;
+                    }
+                }
+            `}} />
             <div className="p-6 space-y-6 max-w-7xl mx-auto">
                 <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
                     <div>
@@ -162,12 +327,12 @@ export default function ReportsIndex({
                     <CardContent className="p-6">
                         <form onSubmit={handleFilterSubmit} className="space-y-6">
                             {/* Type switches grid */}
-                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                            <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
                                 <Button
                                     type="button"
                                     variant={reportType === 'stock' ? 'default' : 'outline'}
                                     className="h-10 gap-1.5 text-xs font-semibold rounded-xl"
-                                    onClick={() => setReportType('stock')}
+                                    onClick={() => handleTypeChange('stock')}
                                 >
                                     <Boxes className="h-4 w-4" />
                                     <span>Laporan Stok</span>
@@ -176,7 +341,7 @@ export default function ReportsIndex({
                                     type="button"
                                     variant={reportType === 'inbound' ? 'default' : 'outline'}
                                     className="h-10 gap-1.5 text-xs font-semibold rounded-xl"
-                                    onClick={() => setReportType('inbound')}
+                                    onClick={() => handleTypeChange('inbound')}
                                 >
                                     <ArrowDownToLine className="h-4 w-4" />
                                     <span>Barang Masuk</span>
@@ -185,16 +350,25 @@ export default function ReportsIndex({
                                     type="button"
                                     variant={reportType === 'outbound' ? 'default' : 'outline'}
                                     className="h-10 gap-1.5 text-xs font-semibold rounded-xl"
-                                    onClick={() => setReportType('outbound')}
+                                    onClick={() => handleTypeChange('outbound')}
                                 >
                                     <ArrowUpFromLine className="h-4 w-4" />
                                     <span>Barang Keluar</span>
                                 </Button>
                                 <Button
                                     type="button"
+                                    variant={reportType === 'outbound_monthly' ? 'default' : 'outline'}
+                                    className="h-10 gap-1.5 text-xs font-semibold rounded-xl"
+                                    onClick={() => handleTypeChange('outbound_monthly')}
+                                >
+                                    <FileText className="h-4 w-4" />
+                                    <span>Rekap Bulanan</span>
+                                </Button>
+                                <Button
+                                    type="button"
                                     variant={reportType === 'mutation' ? 'default' : 'outline'}
                                     className="h-10 gap-1.5 text-xs font-semibold rounded-xl"
-                                    onClick={() => setReportType('mutation')}
+                                    onClick={() => handleTypeChange('mutation')}
                                 >
                                     <ArrowRightLeft className="h-4 w-4" />
                                     <span>Mutasi Stok</span>
@@ -203,19 +377,19 @@ export default function ReportsIndex({
                                     type="button"
                                     variant={reportType === 'request' ? 'default' : 'outline'}
                                     className="h-10 gap-1.5 text-xs font-semibold rounded-xl"
-                                    onClick={() => setReportType('request')}
+                                    onClick={() => handleTypeChange('request')}
                                 >
                                     <ClipboardList className="h-4 w-4" />
-                                    <span>Permintaan</span>
+                                    <span>Pengajuan</span>
                                 </Button>
                             </div>
 
-                             <div className={cn("grid grid-cols-1 gap-6 items-end", role === 'admin_gudang' ? "md:grid-cols-3" : "md:grid-cols-4")}>
+                             <div className={cn("grid grid-cols-1 gap-6 items-end", role === 'admin_gudang' ? "md:grid-cols-2" : "md:grid-cols-3")}>
                                 {/* Warehouse selector */}
                                 {role !== 'admin_gudang' && (
                                     <div className="space-y-2">
                                         <Label htmlFor="warehouse-select" className="text-xs font-bold text-slate-700">Pilih Gudang</Label>
-                                        <Select value={String(selectedWarehouseId || 'all')} onValueChange={setSelectedWarehouseId}>
+                                        <Select value={String(selectedWarehouseId || 'all')} onValueChange={handleWarehouseChange}>
                                             <SelectTrigger id="warehouse-select" className="h-10 rounded-xl">
                                                 <SelectValue placeholder="Pilih Gudang" />
                                             </SelectTrigger>
@@ -239,7 +413,7 @@ export default function ReportsIndex({
                                             id="start-date"
                                             type="date"
                                             value={startDate}
-                                            onChange={(e) => setStartDate(e.target.value)}
+                                            onChange={(e) => handleStartDateChange(e.target.value)}
                                             className="h-10 pl-9 rounded-xl"
                                             disabled={reportType === 'stock'}
                                         />
@@ -255,25 +429,17 @@ export default function ReportsIndex({
                                             id="end-date"
                                             type="date"
                                             value={endDate}
-                                            onChange={(e) => setEndDate(e.target.value)}
+                                            onChange={(e) => handleEndDateChange(e.target.value)}
                                             className="h-10 pl-9 rounded-xl"
                                             disabled={reportType === 'stock'}
                                         />
                                         <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                                     </div>
                                 </div>
-
-                                {/* Submit button */}
-                                <Button type="submit" className="h-10 w-full rounded-xl gap-2 font-bold" disabled={processing}>
-                                    <Search className="h-4 w-4" />
-                                    <span>{processing ? 'Memuat Laporan...' : 'Tampilkan Laporan'}</span>
-                                </Button>
                             </div>
                         </form>
                     </CardContent>
                 </Card>
-
-                {/* Summary Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-950/30 dark:to-indigo-950/20 border border-indigo-100/50 dark:border-indigo-900/30 rounded-2xl p-6 shadow-sm flex items-center justify-between">
                         <div>
@@ -296,15 +462,24 @@ export default function ReportsIndex({
                 <div className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden p-6 space-y-4">
                     <div className="flex justify-between items-center">
                         <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Rincian Data Laporan</h2>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 print-hidden-button">
                             <Button 
                                 variant="outline" 
                                 size="sm" 
-                                className="h-8 gap-1 rounded-lg text-xs" 
+                                className="h-8 gap-1.5 rounded-xl text-xs font-semibold border-neutral-200 hover:bg-neutral-50 dark:border-zinc-800" 
                                 onClick={() => window.print()}
                             >
                                 <Printer className="h-3.5 w-3.5" />
-                                <span>Cetak</span>
+                                <span>Cetak PDF</span>
+                            </Button>
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="h-8 gap-1.5 rounded-xl text-xs font-semibold border-neutral-200 hover:bg-neutral-50 dark:border-zinc-800" 
+                                onClick={exportToExcel}
+                            >
+                                <Download className="h-3.5 w-3.5" />
+                                <span>Ekspor Excel</span>
                             </Button>
                         </div>
                     </div>
@@ -348,6 +523,17 @@ export default function ReportsIndex({
                                         </>
                                     )}
 
+                                    {type === 'outbound_monthly' && (
+                                        <>
+                                            <th className="p-3">Bulan</th>
+                                            <th className="p-3">Gudang</th>
+                                            <th className="p-3">Nama Barang</th>
+                                            <th className="p-3">SKU / Kode</th>
+                                            <th className="p-3">Kategori</th>
+                                            <th className="p-3 text-right">Total Keluar</th>
+                                        </>
+                                    )}
+
                                     {type === 'mutation' && (
                                         <>
                                             <th className="p-3">No. Mutasi</th>
@@ -362,7 +548,7 @@ export default function ReportsIndex({
 
                                     {type === 'request' && (
                                         <>
-                                            <th className="p-3">No. Permintaan</th>
+                                            <th className="p-3">No. Pengajuan</th>
                                             <th className="p-3">Pemohon</th>
                                             <th className="p-3">Gudang</th>
                                             <th className="p-3">Status</th>
@@ -436,6 +622,21 @@ export default function ReportsIndex({
                                                     </td>
                                                 </>
                                             )}
+
+                                            {type === 'outbound_monthly' && (
+                                                 <>
+                                                     <td className="p-3 font-semibold text-slate-800 dark:text-slate-200">{row.month_name}</td>
+                                                     <td className="p-3 text-slate-600 dark:text-slate-400">{row.warehouse_name}</td>
+                                                     <td className="p-3 font-semibold">{row.product_name}</td>
+                                                     <td className="p-3 font-mono text-xs text-muted-foreground">
+                                                         SKU: {row.product_sku} &bull; Kode: {row.product_code}
+                                                     </td>
+                                                     <td className="p-3 text-muted-foreground">{row.category_name}</td>
+                                                     <td className="p-3 text-right font-mono font-bold text-red-600 dark:text-red-400">
+                                                         {row.total_qty} {row.unit_symbol}
+                                                     </td>
+                                                 </>
+                                             )}
 
                                             {type === 'mutation' && (
                                                 <>

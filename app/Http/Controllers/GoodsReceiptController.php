@@ -21,12 +21,12 @@ class GoodsReceiptController extends Controller
 
         if ($itemRequest->status !== 'delivered') {
             return redirect()->route('requests.show', $itemRequest->id)
-                ->with('error', 'Hanya permintaan dengan status Sampai yang dapat dikonfirmasi penerimaannya.');
+                ->with('error', 'Hanya pengajuan dengan status Sampai yang dapat dikonfirmasi penerimaannya.');
         }
 
         if ($itemRequest->goodsReceipt()->exists()) {
             return redirect()->route('requests.show', $itemRequest->id)
-                ->with('error', 'Penerimaan barang untuk permintaan ini sudah dikonfirmasi sebelumnya.');
+                ->with('error', 'Penerimaan barang untuk pengajuan ini sudah dikonfirmasi sebelumnya.');
         }
 
         \Illuminate\Support\Facades\DB::transaction(function() use ($itemRequest, $user, $request) {

@@ -98,6 +98,74 @@ class ReportController extends Controller
             $reportData = $outboundQuery->orderByDesc('created_at')->get();
         }
 
+        // 3b. OUTBOUND MONTHLY REPORT QUERY
+        elseif ($type === 'outbound_monthly') {
+            $outboundQuery = OutboundTransaction::query()
+                ->with(['warehouse', 'outboundItems.product.unit', 'outboundItems.product.category'])
+                ->whereBetween('transaction_date', [$start, $end]);
+
+            if ($isGudang) {
+                $outboundQuery->whereIn('warehouse_id', $assignedWarehouseIds);
+            }
+
+            if ($warehouseId !== 'all') {
+                $outboundQuery->where('warehouse_id', $warehouseId);
+            }
+
+            $transactions = $outboundQuery->get();
+
+            // Group in PHP
+            $grouped = [];
+            foreach ($transactions as $tx) {
+                $date = Carbon::parse($tx->transaction_date);
+                $year = $date->year;
+                $month = $date->month;
+                $monthKey = "$year-" . str_pad((string) $month, 2, '0', STR_PAD_LEFT);
+
+                foreach ($tx->outboundItems as $item) {
+                    $prod = $item->product;
+                    if (!$prod) continue;
+                    
+                    $key = $monthKey . '_' . $prod->id;
+                    if (!isset($grouped[$key])) {
+                        $grouped[$key] = [
+                            'month_key' => $monthKey,
+                            'month_name' => $date->translatedFormat('F Y'),
+                            'year' => $year,
+                            'month' => $month,
+                            'product_id' => $prod->id,
+                            'product_name' => $prod->name,
+                            'product_sku' => $prod->sku,
+                            'product_code' => $prod->code,
+                            'category_name' => $prod->category?->name ?? 'Umum',
+                            'unit_symbol' => $prod->unit?->symbol ?? 'pcs',
+                            'total_qty' => 0,
+                            'warehouse_names' => []
+                        ];
+                    }
+                    $grouped[$key]['total_qty'] += $item->qty;
+                    if ($tx->warehouse && !in_array($tx->warehouse->name, $grouped[$key]['warehouse_names'])) {
+                        $grouped[$key]['warehouse_names'][] = $tx->warehouse->name;
+                    }
+                }
+            }
+
+            // Convert warehouse_names to string
+            foreach ($grouped as &$g) {
+                $g['warehouse_name'] = implode(', ', $g['warehouse_names']);
+            }
+
+            // Sort by month_key desc, then product_name asc
+            usort($grouped, function($a, $b) {
+                if ($a['month_key'] === $b['month_key']) {
+                    return strcmp($a['product_name'], $b['product_name']);
+                }
+                return strcmp($b['month_key'], $a['month_key']);
+            });
+
+            $reportData = $grouped;
+        }
+
         // 4. MUTATION REPORT QUERY
         elseif ($type === 'mutation') {
             $mutationQuery = StockMutation::query()

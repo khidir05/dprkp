@@ -32,7 +32,7 @@ class OutboundController extends Controller
 
         if ($itemRequest->status !== 'approved') {
             return redirect()->route('requests.show', $itemRequest->id)
-                ->with('error', 'Hanya permintaan dengan status Disetujui yang dapat diproses keluar.');
+                ->with('error', 'Hanya pengajuan dengan status Disetujui yang dapat diproses keluar.');
         }
 
         // Load items
@@ -49,7 +49,7 @@ class OutboundController extends Controller
 
         if (!$hasItemsToDispatch) {
             return redirect()->route('requests.show', $itemRequest->id)
-                ->with('error', 'Permintaan ini tidak memiliki barang yang disetujui untuk dikirim.');
+                ->with('error', 'Pengajuan ini tidak memiliki barang yang disetujui untuk dikirim.');
         }
 
         // 1. Verify Stocks

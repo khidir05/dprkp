@@ -352,7 +352,7 @@ export default function AlertsIndex({ alerts, warehouses, filters, role }: Props
                             {dialogAction === 'close' && 'Tutup Alert Stok'}
                         </DialogTitle>
                         <DialogDescription>
-                            {dialogAction === 'hold' && 'Tangguhkan pemesanan/permintaan barang ini dari pemohon sementara stok menipis.'}
+                            {dialogAction === 'hold' && 'Tangguhkan pemesanan/pengajuan barang ini dari pemohon sementara stok menipis.'}
                             {dialogAction === 'restock' && 'Buat item pengadaan (Restok) untuk barang ini agar diproses oleh Manager.'}
                             {dialogAction === 'close' && 'Menutup alert ini secara manual. Status barang akan dikembalikan seperti biasa.'}
                         </DialogDescription>

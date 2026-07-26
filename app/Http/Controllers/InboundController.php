@@ -48,6 +48,13 @@ class InboundController extends Controller
             $query->where('warehouse_id', $request->input('warehouse_id'));
         }
 
+        if ($request->filled('start_date')) {
+            $query->whereDate('transaction_date', '>=', $request->input('start_date'));
+        }
+        if ($request->filled('end_date')) {
+            $query->whereDate('transaction_date', '<=', $request->input('end_date'));
+        }
+
         $transactions = $query->orderByDesc('created_at')
             ->paginate(10)
             ->withQueryString();
@@ -62,7 +69,7 @@ class InboundController extends Controller
         return Inertia::render('inbound/index', [
             'transactions' => $transactions,
             'warehouses' => $warehouses,
-            'filters' => $request->only(['search', 'warehouse_id']),
+            'filters' => $request->only(['search', 'warehouse_id', 'start_date', 'end_date']),
             'canCreate' => $user->roleModel->code === 'admin_gudang' || $user->roleModel->code === 'super_admin',
             'role' => $user->roleModel->code,
         ]);

@@ -141,7 +141,7 @@ export default function RequestShow({ itemRequest, role }: Props) {
     };
 
     const submitCancel = () => {
-        if (confirm('Apakah Anda yakin ingin membatalkan permintaan ini?')) {
+        if (confirm('Apakah Anda yakin ingin membatalkan pengajuan ini?')) {
             cancelForm.delete(`/requests/${itemRequest.id}/cancel`);
         }
     };
@@ -165,7 +165,7 @@ export default function RequestShow({ itemRequest, role }: Props) {
 
     return (
         <>
-            <Head title={`Detail Permintaan - ${itemRequest.request_number}`} />
+            <Head title={`Detail Pengajuan - ${itemRequest.request_number}`} />
             <div className="p-6 space-y-6">
                 <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
                     <div className="flex items-center gap-4">
@@ -175,7 +175,7 @@ export default function RequestShow({ itemRequest, role }: Props) {
                             </Link>
                         </Button>
                         <div>
-                            <h1 className="text-2xl font-bold tracking-tight">Detail Permintaan Barang</h1>
+                            <h1 className="text-2xl font-bold tracking-tight">Detail Pengajuan Barang</h1>
                             <p className="text-muted-foreground font-mono text-sm">Nomor: {itemRequest.request_number}</p>
                         </div>
                     </div>
@@ -201,7 +201,7 @@ export default function RequestShow({ itemRequest, role }: Props) {
                                 </Button>
                                 <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={openApproveDialog}>
                                     <Check className="h-4 w-4 mr-1.5" />
-                                    <span>Setujui Permintaan</span>
+                                    <span>Setujui Pengajuan</span>
                                 </Button>
                             </>
                         )}
@@ -229,7 +229,7 @@ export default function RequestShow({ itemRequest, role }: Props) {
                     <div className="md:col-span-2 space-y-6">
                         <Card>
                             <CardHeader className="bg-muted/30">
-                                <CardTitle>Daftar Barang Permintaan</CardTitle>
+                                <CardTitle>Daftar Barang Pengajuan</CardTitle>
                                 <CardDescription>Daftar barang dan jumlah yang disetujui untuk dikeluarkan.</CardDescription>
                             </CardHeader>
                             <CardContent className="pt-6">
@@ -441,7 +441,7 @@ export default function RequestShow({ itemRequest, role }: Props) {
                     <DialogContent className="sm:max-w-[500px]">
                         <form onSubmit={submitApprove}>
                             <DialogHeader>
-                                <DialogTitle>Persetujuan Permintaan</DialogTitle>
+                                <DialogTitle>Persetujuan Pengajuan</DialogTitle>
                                 <DialogDescription>
                                     Sesuaikan jumlah barang yang disetujui untuk dikirim oleh Gudang.
                                 </DialogDescription>
@@ -482,9 +482,9 @@ export default function RequestShow({ itemRequest, role }: Props) {
                     <DialogContent className="sm:max-w-[400px]">
                         <form onSubmit={submitReject}>
                             <DialogHeader>
-                                <DialogTitle>Tolak Permintaan</DialogTitle>
+                                <DialogTitle>Tolak Pengajuan</DialogTitle>
                                 <DialogDescription>
-                                    Berikan alasan penolakan permintaan barang ini agar dapat diketahui pemohon.
+                                    Berikan alasan penolakan pengajuan barang ini agar dapat diketahui pemohon.
                                 </DialogDescription>
                             </DialogHeader>
                             <div className="grid gap-4 py-4">
@@ -587,7 +587,7 @@ export default function RequestShow({ itemRequest, role }: Props) {
 RequestShow.layout = {
     breadcrumbs: [
         {
-            title: 'Permintaan Barang',
+            title: 'Pengajuan Barang',
             href: '/requests',
         },
         {

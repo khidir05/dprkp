@@ -47,13 +47,20 @@ class StockOpnameController extends Controller
             $query->where('status', $request->input('status'));
         }
 
+        if ($request->filled('start_date')) {
+            $query->whereDate('opname_date', '>=', $request->input('start_date'));
+        }
+        if ($request->filled('end_date')) {
+            $query->whereDate('opname_date', '<=', $request->input('end_date'));
+        }
+
         $opnames = $query->orderByDesc('created_at')
             ->paginate(10)
             ->withQueryString();
 
         return Inertia::render('stock-opnames/index', [
             'opnames' => $opnames,
-            'filters' => $request->only(['search', 'status']),
+            'filters' => $request->only(['search', 'status', 'start_date', 'end_date']),
             'role' => $user->roleModel->code,
         ]);
     }

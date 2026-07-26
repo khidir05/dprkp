@@ -132,7 +132,7 @@ export function MobileLayout({ children }: MobileLayoutProps) {
                     <span className="text-[10px] mt-0.5">Stok</span>
                 </Link>
 
-                {/* Permintaan Barang */}
+                {/* Pengajuan Barang */}
                 <Link 
                     href="/requests" 
                     className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl transition-colors ${
@@ -142,7 +142,7 @@ export function MobileLayout({ children }: MobileLayoutProps) {
                     }`}
                 >
                     <ClipboardList className="size-5" />
-                    <span className="text-[10px] mt-0.5">Request</span>
+                    <span className="text-[10px] mt-0.5">Pengajuan</span>
                 </Link>
 
                 {/* Laporan (Conditional) */}

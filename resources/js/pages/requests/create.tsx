@@ -74,7 +74,7 @@ export default function RequestCreate({ warehouses, products }: Props) {
         if (exists) {
             const newQty = exists.qty_requested + itemQty;
             if (newQty > stockQty) {
-                toast.error(`Kuantitas total yang diminta (${newQty}) melebihi stok yang tersedia (${stockQty}).`);
+                toast.error(`Kuantitas total yang diajukan (${newQty}) melebihi stok yang tersedia (${stockQty}).`);
                 return;
             }
             setData('items', data.items.map((item) =>
@@ -82,7 +82,7 @@ export default function RequestCreate({ warehouses, products }: Props) {
                     ? { ...item, qty_requested: newQty }
                     : item
             ));
-            toast.success(`Jumlah permintaan "${product.name}" berhasil diupdate.`);
+            toast.success(`Jumlah pengajuan "${product.name}" berhasil diupdate.`);
         } else {
             const newItem: FormItem = {
                 product_id: product.id,
@@ -93,7 +93,7 @@ export default function RequestCreate({ warehouses, products }: Props) {
                 symbol: product.unit?.symbol || 'pcs',
             };
             setData('items', [...data.items, newItem]);
-            toast.success(`Barang "${product.name}" ditambahkan ke permintaan.`);
+            toast.success(`Barang "${product.name}" ditambahkan ke pengajuan.`);
         }
 
         // Reset temp item states
@@ -108,7 +108,7 @@ export default function RequestCreate({ warehouses, products }: Props) {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (data.items.length === 0) {
-            toast.error('Tambahkan minimal 1 barang ke dalam daftar permintaan.');
+            toast.error('Tambahkan minimal 1 barang ke dalam daftar pengajuan.');
             return;
         }
 
@@ -117,7 +117,7 @@ export default function RequestCreate({ warehouses, products }: Props) {
 
     return (
         <>
-            <Head title="Ajukan Permintaan Barang" />
+            <Head title="Buat Pengajuan Barang" />
             <div className="p-6 space-y-6">
                 <div className="flex items-center gap-4">
                     <Button asChild variant="outline" size="icon" className="h-8 w-8">
@@ -126,8 +126,8 @@ export default function RequestCreate({ warehouses, products }: Props) {
                         </Link>
                     </Button>
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight">Ajukan Permintaan Barang</h1>
-                        <p className="text-muted-foreground">Buat formulir permintaan barang kebutuhan kantor kepada pihak gudang.</p>
+                        <h1 className="text-2xl font-bold tracking-tight">Buat Pengajuan Barang</h1>
+                        <p className="text-muted-foreground">Buat formulir pengajuan barang kebutuhan kantor kepada pihak gudang.</p>
                     </div>
                 </div>
 
@@ -136,8 +136,8 @@ export default function RequestCreate({ warehouses, products }: Props) {
                     <div className="md:col-span-2 space-y-6">
                         <Card>
                             <CardHeader className="bg-muted/30">
-                                <CardTitle>Detail Permintaan</CardTitle>
-                                <CardDescription>Tentukan lokasi gudang target barang yang diminta.</CardDescription>
+                                <CardTitle>Detail Pengajuan</CardTitle>
+                                <CardDescription>Tentukan lokasi gudang target barang yang diajukan.</CardDescription>
                             </CardHeader>
                             <CardContent className="pt-6 grid grid-cols-1 gap-4">
                                 <div className="grid gap-2">
@@ -192,7 +192,7 @@ export default function RequestCreate({ warehouses, products }: Props) {
                         {/* Selected Items List */}
                         <Card>
                             <CardHeader className="bg-muted/30">
-                                <CardTitle>Daftar Permintaan Barang</CardTitle>
+                                <CardTitle>Daftar Pengajuan Barang</CardTitle>
                                 <CardDescription>Daftar item barang yang sedang diajukan.</CardDescription>
                             </CardHeader>
                             <CardContent className="pt-6">
@@ -318,7 +318,7 @@ export default function RequestCreate({ warehouses, products }: Props) {
 RequestCreate.layout = {
     breadcrumbs: [
         {
-            title: 'Permintaan Barang',
+            title: 'Pengajuan Barang',
             href: '/requests',
         },
         {

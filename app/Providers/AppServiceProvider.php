@@ -55,10 +55,10 @@ class AppServiceProvider extends ServiceProvider
 
         // Register Eloquent event hooks for Audit Logs & Notifications
         \App\Models\ItemRequest::created(function ($item) use ($notifyManagers) {
-            \App\Services\AuditService::log('Permintaan Barang', 'create', "Mengajukan permohonan barang baru #{$item->request_number}");
+            \App\Services\AuditService::log('Pengajuan Barang', 'create', "Mengajukan permohonan barang baru #{$item->request_number}");
             $notifyManagers(
-                "Permintaan Baru Diajukan",
-                "Ada permohonan barang baru #{$item->request_number} menunggu persetujuan Anda.",
+                "Pengajuan Baru Diajukan",
+                "Ada pengajuan barang baru #{$item->request_number} menunggu persetujuan Anda.",
                 'request',
                 'item_requests',
                 $item->id
@@ -66,13 +66,13 @@ class AppServiceProvider extends ServiceProvider
         });
         \App\Models\ItemRequest::updated(function ($item) use ($notify) {
             if ($item->wasChanged('status')) {
-                \App\Services\AuditService::log('Permintaan Barang', 'status_change', "Mengubah status permohonan #{$item->request_number} menjadi {$item->status}");
+                \App\Services\AuditService::log('Pengajuan Barang', 'status_change', "Mengubah status permohonan #{$item->request_number} menjadi {$item->status}");
                 
                 if ($item->status === 'approved') {
                     $notify(
                         $item->requester_id,
-                        "Permintaan Disetujui",
-                        "Permintaan barang #{$item->request_number} telah disetujui. Silakan tunggu pengambilan barang.",
+                        "Pengajuan Disetujui",
+                        "Pengajuan barang #{$item->request_number} telah disetujui. Silakan tunggu pengambilan barang.",
                         'info',
                         'item_requests',
                         $item->id
@@ -83,8 +83,8 @@ class AppServiceProvider extends ServiceProvider
                         if ($admin->roleModel->code === 'admin_gudang') {
                             $notify(
                                 $admin->id,
-                                "Permintaan Barang Siap Dispatch",
-                                "Permintaan #{$item->request_number} disetujui. Silakan siapkan barang untuk dikirim.",
+                                "Pengajuan Barang Siap Dispatch",
+                                "Pengajuan #{$item->request_number} disetujui. Silakan siapkan barang untuk dikirim.",
                                 'info',
                                 'item_requests',
                                 $item->id
@@ -95,8 +95,8 @@ class AppServiceProvider extends ServiceProvider
                     $reason = $item->rejection_reason ? " Alasan: " . $item->rejection_reason : "";
                     $notify(
                         $item->requester_id,
-                        "Permintaan Ditolak",
-                        "Permintaan barang #{$item->request_number} ditolak oleh Manager.{$reason}",
+                        "Pengajuan Ditolak",
+                        "Pengajuan barang #{$item->request_number} ditolak oleh Manager.{$reason}",
                         'warning',
                         'item_requests',
                         $item->id

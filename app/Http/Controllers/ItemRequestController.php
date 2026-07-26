@@ -46,13 +46,20 @@ class ItemRequestController extends Controller
             $query->where('status', $request->input('status'));
         }
 
+        if ($request->filled('start_date')) {
+            $query->whereDate('created_at', '>=', $request->input('start_date'));
+        }
+        if ($request->filled('end_date')) {
+            $query->whereDate('created_at', '<=', $request->input('end_date'));
+        }
+
         $requests = $query->orderByDesc('created_at')
             ->paginate(10)
             ->withQueryString();
 
         return Inertia::render('requests/index', [
             'requests' => $requests,
-            'filters' => $request->only(['search', 'status']),
+            'filters' => $request->only(['search', 'status', 'start_date', 'end_date']),
             'role' => $user->roleModel->code,
         ]);
     }
@@ -64,7 +71,7 @@ class ItemRequestController extends Controller
     {
         $user = $request->user();
         if ($user->roleModel->code !== 'pemohon' && $user->roleModel->code !== 'super_admin') {
-            abort(403, 'Hanya pemohon yang dapat membuat permintaan barang.');
+            abort(403, 'Hanya pemohon yang dapat membuat pengajuan barang.');
         }
 
         $warehouses = Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'name', 'code']);
@@ -87,7 +94,7 @@ class ItemRequestController extends Controller
     {
         $user = $request->user();
         if ($user->roleModel->code !== 'pemohon' && $user->roleModel->code !== 'super_admin') {
-            abort(403, 'Hanya pemohon yang dapat membuat permintaan barang.');
+            abort(403, 'Hanya pemohon yang dapat membuat pengajuan barang.');
         }
 
         $validated = $request->validate([
@@ -126,7 +133,7 @@ class ItemRequestController extends Controller
         });
 
         return redirect()->route('requests.index')
-            ->with('success', 'Permintaan barang berhasil diajukan dan sedang menunggu persetujuan Manager.');
+            ->with('success', 'Pengajuan barang berhasil diajukan dan sedang menunggu persetujuan Manager.');
     }
 
     /**
@@ -171,12 +178,12 @@ class ItemRequestController extends Controller
     public function approve(Request $request, ItemRequest $itemRequest): RedirectResponse
     {
         if ($request->user()->roleModel->code !== 'manager' && $request->user()->roleModel->code !== 'super_admin') {
-            abort(403, 'Hanya Manager yang dapat menyetujui permintaan barang.');
+            abort(403, 'Hanya Manager yang dapat menyetujui pengajuan barang.');
         }
 
         if ($itemRequest->status !== 'pending') {
             return redirect()->route('requests.show', $itemRequest->id)
-                ->with('error', 'Permintaan ini sudah diproses sebelumnya.');
+                ->with('error', 'Pengajuan ini sudah diproses sebelumnya.');
         }
 
         $validated = $request->validate([
@@ -201,7 +208,7 @@ class ItemRequestController extends Controller
         });
 
         return redirect()->route('requests.show', $itemRequest->id)
-            ->with('success', 'Permintaan barang disetujui dan siap diproses oleh Admin Gudang.');
+            ->with('success', 'Pengajuan barang disetujui dan siap diproses oleh Admin Gudang.');
     }
 
     /**
@@ -210,12 +217,12 @@ class ItemRequestController extends Controller
     public function reject(Request $request, ItemRequest $itemRequest): RedirectResponse
     {
         if ($request->user()->roleModel->code !== 'manager' && $request->user()->roleModel->code !== 'super_admin') {
-            abort(403, 'Hanya Manager yang dapat menolak permintaan barang.');
+            abort(403, 'Hanya Manager yang dapat menolak pengajuan barang.');
         }
 
         if ($itemRequest->status !== 'pending') {
             return redirect()->route('requests.show', $itemRequest->id)
-                ->with('error', 'Permintaan ini sudah diproses sebelumnya.');
+                ->with('error', 'Pengajuan ini sudah diproses sebelumnya.');
         }
 
         $validated = $request->validate([
@@ -232,7 +239,7 @@ class ItemRequestController extends Controller
         ]);
 
         return redirect()->route('requests.show', $itemRequest->id)
-            ->with('success', 'Permintaan barang telah ditolak.');
+            ->with('success', 'Pengajuan barang telah ditolak.');
     }
 
     /**
@@ -241,17 +248,17 @@ class ItemRequestController extends Controller
     public function cancel(Request $request, ItemRequest $itemRequest): RedirectResponse
     {
         if ($request->user()->id !== $itemRequest->requester_id && $request->user()->roleModel->code !== 'super_admin') {
-            abort(403, 'Anda tidak memiliki hak untuk membatalkan permintaan ini.');
+            abort(403, 'Anda tidak memiliki hak untuk membatalkan pengajuan ini.');
         }
 
         if ($itemRequest->status !== 'pending') {
             return redirect()->route('requests.show', $itemRequest->id)
-                ->with('error', 'Hanya permintaan bertatus Pending yang dapat dibatalkan.');
+                ->with('error', 'Hanya pengajuan berstatus Pending yang dapat dibatalkan.');
         }
 
         $itemRequest->delete(); // Or update to a 'cancelled' status if available, but since migration enum is just pending/approved/rejected/completed, delete is appropriate or we can just delete it as planned.
 
         return redirect()->route('requests.index')
-            ->with('success', 'Permintaan barang berhasil dibatalkan/dihapus.');
+            ->with('success', 'Pengajuan barang berhasil dibatalkan/dihapus.');
     }
 }

@@ -46,13 +46,20 @@ class StockMutationController extends Controller
             $query->where('status', $request->input('status'));
         }
 
+        if ($request->filled('start_date')) {
+            $query->whereDate('created_at', '>=', $request->input('start_date'));
+        }
+        if ($request->filled('end_date')) {
+            $query->whereDate('created_at', '<=', $request->input('end_date'));
+        }
+
         $mutations = $query->orderByDesc('created_at')
             ->paginate(10)
             ->withQueryString();
 
         return Inertia::render('mutations/index', [
             'mutations' => $mutations,
-            'filters' => $request->only(['search', 'status']),
+            'filters' => $request->only(['search', 'status', 'start_date', 'end_date']),
             'role' => $user->roleModel->code,
         ]);
     }
