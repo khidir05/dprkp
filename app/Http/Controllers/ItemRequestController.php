@@ -374,35 +374,152 @@ class ItemRequestController extends Controller
             'items' => $jsonData['items'] ?? $itemsData
         ];
 
-        $jsonTempFile = tempnam(sys_get_temp_dir(), 'json');
-        file_put_contents($jsonTempFile, json_encode($jsonData, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
-
         $templatePath = public_path('print/Surat Pengambilan Barang.docx');
         if (!file_exists($templatePath)) {
-            @unlink($jsonTempFile);
             abort(404, 'Template file not found.');
         }
 
         $tempFile = tempnam(sys_get_temp_dir(), 'docx');
+        $compiledSuccessfully = false;
 
-        // Run python script to compile docx
-        $pythonScript = app_path('Services/docx_compiler.py');
-        $command = "python " . escapeshellarg($pythonScript) . " " . escapeshellarg($jsonTempFile) . " " . escapeshellarg($templatePath) . " " . escapeshellarg($tempFile);
-        
-        exec($command, $output, $returnVar);
+        // Try compiling using native PHP ZipArchive first (ideal for standard shared hosting without Python/exec limits)
+        if (class_exists('ZipArchive')) {
+            try {
+                $zip = new \ZipArchive();
+                if ($zip->open($tempFile, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) === TRUE) {
+                    $templateZip = new \ZipArchive();
+                    if ($templateZip->open($templatePath) === TRUE) {
+                        for ($i = 0; $i < $templateZip->numFiles; $i++) {
+                            $filename = $templateZip->getNameIndex($i);
+                            $fileContent = $templateZip->getFromIndex($i);
+                            
+                            if ($filename === 'word/document.xml') {
+                                $xmlContent = $fileContent;
+                                
+                                // 1. Clean split placeholders
+                                $xmlContent = preg_replace_callback('/\{([^{}]+)\}/', function($matches) {
+                                    $cleanInner = preg_replace('/<[^>]+>/', '', $matches[1]);
+                                    return "{" . $cleanInner . "}";
+                                }, $xmlContent);
+                                
+                                // Hardcoded replacements
+                                $xmlContent = str_replace('dari Liman', "dari " . $jsonData['requester_name'], $xmlContent);
+                                $xmlContent = str_replace('Irawan Saputra', $jsonData['nama_penatausahaan'] ?: '........................................', $xmlContent);
+                                $xmlContent = str_replace('Kepala Sub Bagian Tata Usaha Unit Pengelola Rumah Susun II', $jsonData['jabatan_penatausahaan'] ?: '........................................', $xmlContent);
+                                $xmlContent = str_replace('Pengurus Barang Pembantu', $jsonData['jabatan_pengurus_barang'] ?: 'Pengurus Barang Pembantu', $xmlContent);
+                                
+                                // 2. Duplicate rows
+                                $rowRegex = '/<w:tr(?:(?!<\/w:tr>).)*?\{nama_barang\}(?:(?!<\/w:tr>).)*?<\/w:tr>/s';
+                                preg_match_all($rowRegex, $xmlContent, $rowsMatches);
+                                $rows = $rowsMatches[0] ?? [];
+                                
+                                if (count($rows) >= 6) {
+                                    $makeRows = function($templateRow, $items) use ($jsonData) {
+                                        $newRows = [];
+                                        foreach ($items as $idx => $it) {
+                                            $rowXml = $templateRow;
+                                            $rowXml = str_replace('{nama_barang}', $it['name'], $rowXml);
+                                            $rowXml = str_replace('{qty}', $it['qty'] . ' ' . $it['unit'], $rowXml);
+                                            $rowXml = str_replace('{keterangan}', ($idx === 0 ? ($jsonData['notes'] ?? '') : ''), $rowXml);
+                                            $rowXml = preg_replace('/<w:t>([0-9]+)<\/w:t>/', '<w:t>' . ($idx + 1) . '</w:t>', $rowXml, 1);
+                                            $newRows[] = $rowXml;
+                                        }
+                                        return implode('', $newRows);
+                                    };
+                                    
+                                    // Replace Table 1
+                                    $table1Pattern = '/' . preg_quote($rows[0], '/') . '(?:(?!<w:tr).)*?' . preg_quote($rows[1], '/') . '/s';
+                                    $xmlContent = preg_replace($table1Pattern, $makeRows($rows[0], $jsonData['items']), $xmlContent, 1);
+                                    
+                                    // Re-fetch remaining
+                                    preg_match_all($rowRegex, $xmlContent, $rowsMatchesUpd);
+                                    $rowsUpd = $rowsMatchesUpd[0] ?? [];
+                                    
+                                    if (count($rowsUpd) >= 4) {
+                                        // Replace Table 2
+                                        $table2Pattern = '/' . preg_quote($rowsUpd[0], '/') . '(?:(?!<w:tr).)*?' . preg_quote($rowsUpd[1], '/') . '/s';
+                                        $xmlContent = preg_replace($table2Pattern, $makeRows($rowsUpd[0], $jsonData['items']), $xmlContent, 1);
+                                        
+                                        // Re-fetch remaining
+                                        preg_match_all($rowRegex, $xmlContent, $rowsMatchesUpd2);
+                                        $rowsUpd2 = $rowsMatchesUpd2[0] ?? [];
+                                        
+                                        if (count($rowsUpd2) >= 2) {
+                                            // Replace Table 3
+                                            $table3Pattern = '/' . preg_quote($rowsUpd2[0], '/') . '(?:(?!<w:tr).)*?' . preg_quote($rowsUpd2[1], '/') . '/s';
+                                            $xmlContent = preg_replace($table3Pattern, $makeRows($rowsUpd2[0], $jsonData['items']), $xmlContent, 1);
+                                        }
+                                    }
+                                }
+                                
+                                // 3. Replace general placeholders
+                                $replacements = [
+                                    '{nama_pemohon}' => $jsonData['requester_name'],
+                                    '{bidang_pemohon}' => $jsonData['requester_dept'],
+                                    '{nama_manajer}' => $jsonData['nama_atasan'],
+                                    '{nip_manajer}' => $jsonData['nip'],
+                                    '{divisi_manajer}' => $jsonData['jabatan_atasan'],
+                                    '{nama_atasan}' => $jsonData['nama_penatausahaan'] ?: '........................................',
+                                    '{nip_atasan}' => $jsonData['nip_penatausahaan'] ?: '........................................',
+                                    '{jabatan_atasan}' => $jsonData['jabatan_penatausahaan'] ?: '........................................',
+                                    '{nama_admin}' => $jsonData['nama_pengurus_barang'] ?: '........................................',
+                                    '{nip_admin}' => $jsonData['nip_pengurus_barang'] ?: '........................................',
+                                    '{jabatan_admin}' => $jsonData['jabatan_pengurus_barang'] ?: '........................................',
+                                    '{tanggal, bulan, tahun}' => $jsonData['date_formatted'],
+                                    '{tanggal}' => $jsonData['tanggal'],
+                                    '{bulan}' => $jsonData['bulan'],
+                                    '{tahun}' => $jsonData['tahun'],
+                                    'Senin' => $jsonData['day_name'],
+                                    'Tiga Belas' => $jsonData['tanggal_words'],
+                                    'Juli' => $jsonData['bulan'],
+                                    'Dua Ribu Dua Puluh Enam' => $jsonData['tahun_words'],
+                                ];
+                                
+                                foreach ($replacements as $k => $v) {
+                                    $xmlContent = str_replace($k, $v, $xmlContent);
+                                }
+                                
+                                $zip->addFromString($filename, $xmlContent);
+                            } else {
+                                $zip->addFromString($filename, $fileContent);
+                            }
+                        }
+                        $templateZip->close();
+                        $compiledSuccessfully = true;
+                    }
+                    $zip->close();
+                }
+            } catch (\Exception $e) {
+                \Log::error("PHP ZipArchive DOCX compile failed: " . $e->getMessage());
+            }
+        }
 
-        // Delete temporary JSON file
-        @unlink($jsonTempFile);
+        // If ZipArchive wasn't successful or failed, fallback to python command execution
+        if (!$compiledSuccessfully) {
+            $jsonTempFile = tempnam(sys_get_temp_dir(), 'json');
+            file_put_contents($jsonTempFile, json_encode($jsonData, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+            
+            $pythonScript = app_path('Services/docx_compiler.py');
+            $pythonExecutable = DIRECTORY_SEPARATOR === '\\' ? 'python' : 'python3';
+            $command = $pythonExecutable . " " . escapeshellarg($pythonScript) . " " . escapeshellarg($jsonTempFile) . " " . escapeshellarg($templatePath) . " " . escapeshellarg($tempFile) . " 2>&1";
+            
+            exec($command, $output, $returnVar);
+            @unlink($jsonTempFile);
+            
+            if ($returnVar !== 0) {
+                if (file_exists($tempFile)) {
+                    @unlink($tempFile);
+                }
+                return abort(500, 'Unable to generate docx using python fallback. Output: ' . implode("\n", $output));
+            }
+        }
 
-        if ($returnVar === 0 && file_exists($tempFile)) {
+        if (file_exists($tempFile)) {
             $downloadName = 'Surat_Pengambilan_Barang_' . $itemRequest->request_number . '.docx';
             return response()->download($tempFile, $downloadName)->deleteFileAfterSend(true);
         }
 
-        if (file_exists($tempFile)) {
-            @unlink($tempFile);
-        }
-        return abort(500, 'Unable to generate docx using python compiler. Output: ' . implode("\n", $output));
+        return abort(500, 'Document file compilation was not created.');
     }
 
     /**
