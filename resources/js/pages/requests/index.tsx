@@ -95,7 +95,7 @@ export default function RequestsIndex({ requests, filters, role }: Props) {
             return [
                 idx + 1,
                 row.request_number,
-                row.requester?.name || '-',
+                row.requester?.name || row.requester_name || '-',
                 row.warehouse?.name || '-',
                 itemsStr,
                 statusLabel,
@@ -222,14 +222,12 @@ export default function RequestsIndex({ requests, filters, role }: Props) {
                             <span>Ekspor Excel</span>
                         </Button>
 
-                        {(role === 'pemohon' || role === 'super_admin') && (
-                            <Button asChild size="sm" className="h-9 gap-1.5">
-                                <Link href="/requests/create">
-                                    <Plus className="h-4 w-4" />
-                                    <span>Buat Pengajuan</span>
-                                </Link>
-                            </Button>
-                        )}
+                        <Button asChild size="sm" className="h-9 gap-1.5">
+                            <a href="/pengajuan" target="_blank" rel="noopener noreferrer">
+                                <Plus className="h-4 w-4" />
+                                <span>Buat Pengajuan</span>
+                            </a>
+                        </Button>
                     </div>
                 </div>
 
@@ -252,8 +250,8 @@ export default function RequestsIndex({ requests, filters, role }: Props) {
                                 <td className="p-4 font-semibold font-mono text-sm">{req.request_number}</td>
                                 <td className="p-4 text-sm font-medium">{dateFormatted}</td>
                                 <td className="p-4 text-sm">
-                                    <div className="font-semibold">{req.requester?.name}</div>
-                                    <div className="text-xs text-muted-foreground">{req.requester?.email}</div>
+                                    <div className="font-semibold">{req.requester?.name || req.requester_name || 'Guest'}</div>
+                                    <div className="text-xs text-muted-foreground">{req.requester?.email || req.requester_dept || '-'}</div>
                                 </td>
                                 <td className="p-4">
                                     <div className="text-sm font-medium">{req.warehouse?.name}</div>

@@ -228,7 +228,7 @@ export default function Dashboard({ stats, role }: Props) {
                                         <div>
                                             <div className="font-semibold text-slate-800 dark:text-slate-200">{req.request_number}</div>
                                             <div className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
-                                                <span>Oleh: {req.requester?.name || req.createdBy?.name || 'Pemohon'}</span>
+                                                <span>Oleh: {req.requester?.name || req.requester_name || req.createdBy?.name || 'Pemohon'}</span>
                                                 <span>&bull;</span>
                                                 <span>Gudang: {req.warehouse?.name}</span>
                                             </div>
@@ -405,7 +405,7 @@ export default function Dashboard({ stats, role }: Props) {
                                         <div>
                                             <div className="font-semibold text-slate-800 dark:text-slate-200">{outb.transaction_number}</div>
                                             <div className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
-                                                <span>Penerima: {outb.item_request?.requester?.name || 'Pemohon'}</span>
+                                                <span>Penerima: {outb.item_request?.requester?.name || outb.item_request?.requester_name || 'Pemohon'}</span>
                                                 <span>&bull;</span>
                                                 <span>{outb.warehouse?.name}</span>
                                             </div>

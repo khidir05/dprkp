@@ -54,8 +54,10 @@ class AppServiceProvider extends ServiceProvider
         };
 
         // Register Eloquent event hooks for Audit Logs & Notifications
-        \App\Models\ItemRequest::created(function ($item) use ($notifyManagers) {
+        \App\Models\ItemRequest::created(function ($item) use ($notifyManagers, $notify) {
             \App\Services\AuditService::log('Pengajuan Barang', 'create', "Mengajukan permohonan barang baru #{$item->request_number}");
+            
+            // Notify managers & super admins
             $notifyManagers(
                 "Pengajuan Baru Diajukan",
                 "Ada pengajuan barang baru #{$item->request_number} menunggu persetujuan Anda.",
@@ -69,15 +71,18 @@ class AppServiceProvider extends ServiceProvider
                 \App\Services\AuditService::log('Pengajuan Barang', 'status_change', "Mengubah status permohonan #{$item->request_number} menjadi {$item->status}");
                 
                 if ($item->status === 'approved') {
-                    $notify(
-                        $item->requester_id,
-                        "Pengajuan Disetujui",
-                        "Pengajuan barang #{$item->request_number} telah disetujui. Silakan tunggu pengambilan barang.",
-                        'info',
-                        'item_requests',
-                        $item->id
-                    );
+                    if ($item->requester_id) {
+                        $notify(
+                            $item->requester_id,
+                            "Pengajuan Disetujui",
+                            "Pengajuan barang #{$item->request_number} telah disetujui. Silakan tunggu pengambilan barang.",
+                            'info',
+                            'item_requests',
+                            $item->id
+                        );
+                    }
                     
+                    // Notify warehouse admins assigned to the target warehouse
                     $admins = $item->warehouse?->users ?? [];
                     foreach ($admins as $admin) {
                         if ($admin->roleModel->code === 'admin_gudang') {
@@ -91,16 +96,49 @@ class AppServiceProvider extends ServiceProvider
                             );
                         }
                     }
+
+                    // Always notify superadmins
+                    $superAdmins = \App\Models\User::whereHas('roleModel', function($q) {
+                        $q->where('code', 'super_admin');
+                    })->get();
+                    foreach ($superAdmins as $sa) {
+                        $notify(
+                            $sa->id,
+                            "Pengajuan Disetujui",
+                            "Pengajuan barang #{$item->request_number} telah disetujui.",
+                            'info',
+                            'item_requests',
+                            $item->id
+                        );
+                    }
                 } elseif ($item->status === 'rejected') {
-                    $reason = $item->rejection_reason ? " Alasan: " . $item->rejection_reason : "";
-                    $notify(
-                        $item->requester_id,
-                        "Pengajuan Ditolak",
-                        "Pengajuan barang #{$item->request_number} ditolak oleh Manager.{$reason}",
-                        'warning',
-                        'item_requests',
-                        $item->id
-                    );
+                    if ($item->requester_id) {
+                        $reason = $item->rejection_reason ? " Alasan: " . $item->rejection_reason : "";
+                        $notify(
+                            $item->requester_id,
+                            "Pengajuan Ditolak",
+                            "Pengajuan barang #{$item->request_number} ditolak oleh Manager.{$reason}",
+                            'warning',
+                            'item_requests',
+                            $item->id
+                        );
+                    }
+
+                    // Always notify superadmins
+                    $superAdmins = \App\Models\User::whereHas('roleModel', function($q) {
+                        $q->where('code', 'super_admin');
+                    })->get();
+                    foreach ($superAdmins as $sa) {
+                        $reason = $item->rejection_reason ? " Alasan: " . $item->rejection_reason : "";
+                        $notify(
+                            $sa->id,
+                            "Pengajuan Ditolak",
+                            "Pengajuan barang #{$item->request_number} ditolak oleh Manager.{$reason}",
+                            'warning',
+                            'item_requests',
+                            $item->id
+                        );
+                    }
                 }
             }
         });
@@ -112,20 +150,20 @@ class AppServiceProvider extends ServiceProvider
 
         \App\Models\OutboundTransaction::created(function ($item) use ($notify) {
             $reqNum = $item->itemRequest?->request_number ?? '';
-            $desc = "Mengirim keluar barang #{$item->outbound_number}";
+            $desc = "Mengirim keluar barang #{$item->transaction_number}";
             if ($reqNum) {
                 $desc .= " untuk permohonan #{$reqNum}";
             }
             \App\Services\AuditService::log('Barang Keluar', 'create', $desc);
             
-            if ($item->itemRequest) {
+            if ($item->itemRequest && $item->itemRequest->requester_id) {
                 $notify(
                     $item->itemRequest->requester_id,
                     "Barang Siap Diambil / Dikirim",
                     "Barang untuk permohonan #{$reqNum} telah didepatch dari gudang. Silakan konfirmasi penerimaan jika barang sudah sampai.",
                     'info',
                     'item_requests',
-                    $item->item_request_id
+                    $item->request_id
                 );
             }
         });
@@ -144,7 +182,7 @@ class AppServiceProvider extends ServiceProvider
                             "Pemohon telah mengonfirmasi penerimaan barang untuk permohonan #{$reqNum}.",
                             'success',
                             'item_requests',
-                            $item->item_request_id
+                            $item->request_id
                         );
                     }
                 }

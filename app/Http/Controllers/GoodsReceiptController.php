@@ -15,8 +15,12 @@ class GoodsReceiptController extends Controller
     public function store(Request $request, ItemRequest $itemRequest): RedirectResponse
     {
         $user = $request->user();
-        if ($user->id !== $itemRequest->requester_id && $user->roleModel->code !== 'super_admin') {
-            abort(403, 'Hanya pemohon asli yang mengajukan barang yang dapat mengonfirmasi penerimaan.');
+        $isAuthorized = ($user->roleModel->code === 'super_admin') ||
+                        ($itemRequest->requester_id !== null && $user->id === $itemRequest->requester_id) ||
+                        ($itemRequest->requester_id === null && in_array($user->roleModel->code, ['admin_gudang', 'manager']));
+
+        if (!$isAuthorized) {
+            abort(403, 'Anda tidak memiliki hak untuk mengonfirmasi penerimaan pengajuan ini.');
         }
 
         if ($itemRequest->status !== 'delivered') {

@@ -385,10 +385,49 @@ export default function RequestShow({ itemRequest, role }: Props) {
                                     <User className="h-4 w-4 text-muted-foreground mt-0.5" />
                                     <div>
                                         <h4 className="text-xs font-semibold text-muted-foreground uppercase">Pemohon</h4>
-                                        <p className="mt-1 text-sm font-medium">{itemRequest.requester?.name}</p>
-                                        <p className="text-xs text-muted-foreground">{itemRequest.requester?.email}</p>
+                                        <p className="mt-1 text-sm font-medium">{itemRequest.requester?.name || itemRequest.requester_name || 'Guest'}</p>
+                                        <p className="text-xs text-muted-foreground">{itemRequest.requester?.email || itemRequest.requester_dept || '-'}</p>
                                     </div>
                                 </div>
+
+                                {itemRequest.nama_atasan && (
+                                     <div className="flex gap-3 items-start pt-3 border-t">
+                                         <User className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                         <div>
+                                             <h4 className="text-xs font-semibold text-muted-foreground uppercase">Atasan Langsung</h4>
+                                             <p className="mt-1 text-sm font-medium">{itemRequest.nama_atasan}</p>
+                                             <p className="text-xs text-muted-foreground">
+                                                 {itemRequest.jabatan_atasan} {itemRequest.nip ? `(NIP. ${itemRequest.nip})` : ''}
+                                             </p>
+                                         </div>
+                                     </div>
+                                 )}
+
+                                 {itemRequest.nama_penatausahaan && (
+                                     <div className="flex gap-3 items-start pt-3 border-t">
+                                         <User className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                         <div>
+                                             <h4 className="text-xs font-semibold text-muted-foreground uppercase">Penatausahaan</h4>
+                                             <p className="mt-1 text-sm font-medium">{itemRequest.nama_penatausahaan}</p>
+                                             <p className="text-xs text-muted-foreground">
+                                                 {itemRequest.jabatan_penatausahaan} {itemRequest.nip_penatausahaan ? `(NIP. ${itemRequest.nip_penatausahaan})` : ''}
+                                             </p>
+                                         </div>
+                                     </div>
+                                 )}
+
+                                 {itemRequest.nama_pengurus_barang && (
+                                     <div className="flex gap-3 items-start pt-3 border-t">
+                                         <User className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                         <div>
+                                             <h4 className="text-xs font-semibold text-muted-foreground uppercase">Pengurus Barang</h4>
+                                             <p className="mt-1 text-sm font-medium">{itemRequest.nama_pengurus_barang}</p>
+                                             <p className="text-xs text-muted-foreground">
+                                                 {itemRequest.jabatan_pengurus_barang} {itemRequest.nip_pengurus_barang ? `(NIP. ${itemRequest.nip_pengurus_barang})` : ''}
+                                             </p>
+                                         </div>
+                                     </div>
+                                 )}
 
                                 <div className="flex gap-3 items-start pt-3 border-t">
                                     <Calendar className="h-4 w-4 text-muted-foreground mt-0.5" />

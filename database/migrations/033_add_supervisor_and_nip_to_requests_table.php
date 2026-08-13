@@ -12,12 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('requests', function (Blueprint $table) {
-            $table->string('status', 50)->default('pending')->change();
+            $table->string('nip')->nullable()->after('requester_dept');
+            $table->string('nama_atasan')->nullable()->after('nip');
+            $table->string('jabatan_atasan')->nullable()->after('nama_atasan');
         });
-
-        if (Schema::getConnection()->getDriverName() === 'pgsql') {
-            \Illuminate\Support\Facades\DB::statement('ALTER TABLE requests DROP CONSTRAINT IF EXISTS requests_status_check');
-        }
     }
 
     /**
@@ -26,7 +24,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('requests', function (Blueprint $table) {
-            $table->enum('status', ['pending', 'approved', 'rejected', 'completed'])->default('pending')->change();
+            $table->dropColumn(['nip', 'nama_atasan', 'jabatan_atasan']);
         });
     }
 };

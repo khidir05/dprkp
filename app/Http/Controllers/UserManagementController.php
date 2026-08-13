@@ -42,7 +42,7 @@ class UserManagementController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        $roles = Role::orderBy('nama')->get(['id', 'nama', 'label', 'code']);
+        $roles = Role::where('code', '!=', 'pemohon')->orderBy('nama')->get(['id', 'nama', 'label', 'code']);
         $warehouses = Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'name', 'code']);
 
         return Inertia::render('users/index', [
@@ -202,7 +202,7 @@ class UserManagementController extends Controller
             ->orderByDesc('created_at')
             ->paginate(15);
 
-        $roles = Role::orderBy('nama')->get(['id', 'nama', 'label']);
+        $roles = Role::where('code', '!=', 'pemohon')->orderBy('nama')->get(['id', 'nama', 'label']);
 
         return Inertia::render('users/links', [
             'links' => $links,

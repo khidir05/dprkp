@@ -9,6 +9,10 @@ Route::get('/', function () {
     return redirect()->route('login');
 })->name('home');
 
+Route::get('pengajuan', [App\Http\Controllers\ItemRequestController::class, 'guestCreate'])->name('requests.guest-create');
+Route::post('pengajuan', [App\Http\Controllers\ItemRequestController::class, 'guestStore'])->name('requests.guest-store');
+Route::get('pengajuan/{request_number}/print', [App\Http\Controllers\ItemRequestController::class, 'guestPrint'])->name('requests.guest-print');
+
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\SupplierController;

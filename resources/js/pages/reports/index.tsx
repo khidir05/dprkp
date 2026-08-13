@@ -606,8 +606,8 @@ export default function ReportsIndex({
 
                                             {type === 'outbound' && (
                                                 <>
-                                                    <td className="p-3 font-semibold">{row.outbound_number}</td>
-                                                    <td className="p-3 font-medium text-slate-800 dark:text-slate-200">{row.item_request?.requester?.name || 'Pemohon'}</td>
+                                                    <td className="p-3 font-semibold">{row.transaction_number}</td>
+                                                    <td className="p-3 font-medium text-slate-800 dark:text-slate-200">{row.item_request?.requester?.name || row.item_request?.requester_name || 'Pemohon'}</td>
                                                     <td className="p-3 text-slate-600 dark:text-slate-400">{row.warehouse?.name}</td>
                                                     <td className="p-3 text-xs text-muted-foreground">{row.processed_by?.name || 'Sistem'}</td>
                                                     <td className="p-3 max-w-xs text-xs space-y-1">
@@ -655,7 +655,7 @@ export default function ReportsIndex({
                                             {type === 'request' && (
                                                 <>
                                                     <td className="p-3 font-semibold">{row.request_number}</td>
-                                                    <td className="p-3 font-medium text-slate-800 dark:text-slate-200">{row.requester?.name || 'Pemohon'}</td>
+                                                    <td className="p-3 font-medium text-slate-800 dark:text-slate-200">{row.requester?.name || row.requester_name || 'Pemohon'}</td>
                                                     <td className="p-3 text-slate-600 dark:text-slate-400">{row.warehouse?.name}</td>
                                                     <td className="p-3">{getStatusBadge(row.status)}</td>
                                                     <td className="p-3 max-w-xs text-xs space-y-1">
