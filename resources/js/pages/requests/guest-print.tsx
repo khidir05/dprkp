@@ -105,7 +105,7 @@ export default function GuestRequestPrint({ itemRequest }: Props) {
                             <td className="py-1">{itemRequest.requester_name}</td>
                         </tr>
                         <tr>
-                            <td className="py-1 font-bold">Unit Kerja / Bidang</td>
+                            <td className="py-1 font-bold">Divisi Pemohon</td>
                             <td className="py-1">:</td>
                             <td className="py-1">{itemRequest.requester_dept}</td>
                         </tr>

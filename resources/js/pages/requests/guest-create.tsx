@@ -89,7 +89,7 @@ export default function GuestRequestCreate({ warehouses, products }: Props) {
             return;
         }
         if (!data.requester_dept.trim()) {
-            toast.error('Silakan isi Unit Kerja / Instansi.');
+            toast.error('Silakan pilih Divisi Pemohon.');
             return;
         }
         if (!data.nama_atasan.trim()) {
@@ -97,7 +97,7 @@ export default function GuestRequestCreate({ warehouses, products }: Props) {
             return;
         }
         if (!data.jabatan_atasan.trim()) {
-            toast.error('Silakan isi Jabatan Atasan.');
+            toast.error('Silakan pilih Jabatan Atasan.');
             return;
         }
         if (!data.nip.trim()) {
@@ -347,14 +347,21 @@ export default function GuestRequestCreate({ warehouses, products }: Props) {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="requester_dept" className="text-slate-700 dark:text-zinc-300 font-semibold text-xs uppercase tracking-wider">Instansi / Unit Kerja / Bidang</Label>
-                                        <Input
-                                            id="requester_dept"
+                                        <Label htmlFor="requester_dept" className="text-slate-700 dark:text-zinc-300 font-semibold text-xs uppercase tracking-wider">Divisi Pemohon</Label>
+                                        <Select
                                             value={data.requester_dept}
-                                            onChange={(e) => setData('requester_dept', e.target.value)}
-                                            placeholder="Tulis nama instansi dinas atau bidang kerja..."
-                                            className="rounded-xl h-11 border-slate-200 dark:border-zinc-800 focus-visible:ring-indigo-500"
-                                        />
+                                            onValueChange={(val) => setData('requester_dept', val)}
+                                        >
+                                            <SelectTrigger id="requester_dept" className="rounded-xl h-11 border-slate-200 dark:border-zinc-800 focus:ring-indigo-500">
+                                                <SelectValue placeholder="Pilih Divisi Pemohon" />
+                                            </SelectTrigger>
+                                            <SelectContent className="rounded-xl border-slate-200 dark:border-zinc-800">
+                                                <SelectItem value="Divisi Mekanikal Elektrikal">Divisi Mekanikal Elektrikal</SelectItem>
+                                                <SelectItem value="Divisi Kebersihan">Divisi Kebersihan</SelectItem>
+                                                <SelectItem value="Divisi Keamanan">Divisi Keamanan</SelectItem>
+                                                <SelectItem value="Divisi Admin">Divisi Admin</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                         {errors.requester_dept && <p className="text-xs text-red-500 font-medium">{errors.requester_dept}</p>}
                                     </div>
 
@@ -374,19 +381,20 @@ export default function GuestRequestCreate({ warehouses, products }: Props) {
                                             </div>
 
                                             <div className="space-y-2">
-                                                <Label htmlFor="jabatan_atasan" className="text-slate-700 dark:text-zinc-300 font-semibold text-xs uppercase tracking-wider">Divisi Atasan</Label>
+                                                <Label htmlFor="jabatan_atasan" className="text-slate-700 dark:text-zinc-300 font-semibold text-xs uppercase tracking-wider">Jabatan Atasan</Label>
                                                 <Select
                                                     value={data.jabatan_atasan}
                                                     onValueChange={(val) => setData('jabatan_atasan', val)}
                                                 >
                                                     <SelectTrigger id="jabatan_atasan" className="rounded-xl h-11 border-slate-200 dark:border-zinc-800 focus:ring-indigo-500">
-                                                        <SelectValue placeholder="Pilih Divisi Atasan" />
+                                                        <SelectValue placeholder="Pilih Jabatan Atasan" />
                                                     </SelectTrigger>
                                                     <SelectContent className="rounded-xl border-slate-200 dark:border-zinc-800">
-                                                        <SelectItem value="Divisi Mekanikal Elektrikal">Divisi Mekanikal Elektrikal</SelectItem>
-                                                        <SelectItem value="Divisi Kebersihan">Divisi Kebersihan</SelectItem>
-                                                        <SelectItem value="Divisi Keamanan">Divisi Keamanan</SelectItem>
-                                                        <SelectItem value="Divisi Admin">Divisi Admin</SelectItem>
+                                                        <SelectItem value="Kepala satuan sarana dan prasarana">Kepala satuan sarana dan prasarana</SelectItem>
+                                                        <SelectItem value="Kepala satuan pelayanan">Kepala satuan pelayanan</SelectItem>
+                                                        <SelectItem value="Kepala satuan penertiban">Kepala satuan penertiban</SelectItem>
+                                                        <SelectItem value="Pejabat Penatausahaan Pengguna Barang">Pejabat Penatausahaan Pengguna Barang</SelectItem>
+                                                        <SelectItem value="Pengurus Barang">Pengurus Barang</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                                 {errors.jabatan_atasan && <p className="text-xs text-red-500 font-medium">{errors.jabatan_atasan}</p>}
@@ -570,7 +578,7 @@ export default function GuestRequestCreate({ warehouses, products }: Props) {
                                 <Card className="bg-slate-100/50 dark:bg-zinc-900 border border-slate-200/50 dark:border-zinc-800/80 rounded-2xl shadow-sm">
                                     <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-6 text-xs">
                                         <div className="space-y-0.5">
-                                            <span className="text-slate-400 font-medium uppercase tracking-wider">Nama Pemohon & Instansi:</span>
+                                            <span className="text-slate-400 font-medium uppercase tracking-wider">Nama & Divisi Pemohon:</span>
                                             <p className="font-bold text-slate-800 dark:text-zinc-200 text-sm">{data.requester_name}</p>
                                             <p className="text-xs text-slate-500">{data.requester_dept}</p>
                                         </div>
