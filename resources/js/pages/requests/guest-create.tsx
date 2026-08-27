@@ -436,7 +436,7 @@ export default function GuestRequestCreate({ warehouses, products }: Props) {
                                                     onValueChange={(val) => setData('jabatan_penatausahaan', val)}
                                                 >
                                                     <SelectTrigger id="jabatan_penatausahaan" className="rounded-xl h-11 border-slate-200 dark:border-zinc-800 focus:ring-indigo-500">
-                                                        <SelectValue placeholder="Pilih Jabatan Penatausaha" />
+                                                        <SelectValue placeholder="Pilih Jabatan Kepala Sub Bagian Tata Usaha" />
                                                     </SelectTrigger>
                                                     <SelectContent className="rounded-xl border-slate-200 dark:border-zinc-800">
                                                         <SelectItem value="Kepala satuan sarana dan prasarana">Kepala satuan sarana dan prasarana</SelectItem>
