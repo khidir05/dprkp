@@ -415,10 +415,10 @@ export default function GuestRequestCreate({ warehouses, products }: Props) {
                                     </div>
 
                                     <div className="border-t border-slate-100 dark:border-zinc-800/80 pt-4 space-y-4">
-                                        <h3 className="text-xs font-bold text-slate-800 dark:text-zinc-200 uppercase tracking-wider">Identitas Penatausaha</h3>
+                                        <h3 className="text-xs font-bold text-slate-800 dark:text-zinc-200 uppercase tracking-wider">Identitas Kepala Sub Bagian Tata Usaha</h3>
                                         <div className="space-y-4">
                                             <div className="space-y-2">
-                                                <Label htmlFor="nama_penatausahaan" className="text-slate-700 dark:text-zinc-300 font-semibold text-xs uppercase tracking-wider">Nama Penatausaha</Label>
+                                                <Label htmlFor="nama_penatausahaan" className="text-slate-700 dark:text-zinc-300 font-semibold text-xs uppercase tracking-wider">Nama Kepala Sub Bagian Tata Usaha</Label>
                                                 <Input
                                                     id="nama_penatausahaan"
                                                     value={data.nama_penatausahaan}
@@ -430,7 +430,7 @@ export default function GuestRequestCreate({ warehouses, products }: Props) {
                                             </div>
 
                                             <div className="space-y-2">
-                                                <Label htmlFor="jabatan_penatausahaan" className="text-slate-700 dark:text-zinc-300 font-semibold text-xs uppercase tracking-wider">Jabatan Penatausaha</Label>
+                                                <Label htmlFor="jabatan_penatausahaan" className="text-slate-700 dark:text-zinc-300 font-semibold text-xs uppercase tracking-wider">Jabatan Kepala Sub Bagian Tata Usaha</Label>
                                                 <Select
                                                     value={data.jabatan_penatausahaan}
                                                     onValueChange={(val) => setData('jabatan_penatausahaan', val)}
@@ -450,7 +450,7 @@ export default function GuestRequestCreate({ warehouses, products }: Props) {
                                             </div>
 
                                             <div className="space-y-2">
-                                                <Label htmlFor="nip_penatausahaan" className="text-slate-700 dark:text-zinc-300 font-semibold text-xs uppercase tracking-wider">NIP Penatausaha</Label>
+                                                <Label htmlFor="nip_penatausahaan" className="text-slate-700 dark:text-zinc-300 font-semibold text-xs uppercase tracking-wider">NIP Kepala Sub Bagian Tata Usaha</Label>
                                                 <Input
                                                     id="nip_penatausahaan"
                                                     value={data.nip_penatausahaan}
