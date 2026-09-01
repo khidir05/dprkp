@@ -393,7 +393,7 @@ export default function GuestRequestCreate({ warehouses, products }: Props) {
                                                         <SelectItem value="Kepala satuan sarana dan prasarana">Kepala satuan sarana dan prasarana</SelectItem>
                                                         <SelectItem value="Kepala satuan pelayanan">Kepala satuan pelayanan</SelectItem>
                                                         <SelectItem value="Kepala satuan penertiban">Kepala satuan penertiban</SelectItem>
-                                                        <SelectItem value="Pejabat Penatausahaan Pengguna Barang">Kepala Sub Bagian Tata Usaha</SelectItem>
+                                                        <SelectItem value="Kepala Sub Bagian Tata Usaha">Kepala Sub Bagian Tata Usaha</SelectItem>
                                                         <SelectItem value="Pengurus Barang">Pengurus Barang</SelectItem>
                                                     </SelectContent>
                                                 </Select>
@@ -442,7 +442,7 @@ export default function GuestRequestCreate({ warehouses, products }: Props) {
                                                         <SelectItem value="Kepala satuan sarana dan prasarana">Kepala satuan sarana dan prasarana</SelectItem>
                                                         <SelectItem value="Kepala satuan pelayanan">Kepala satuan pelayanan</SelectItem>
                                                         <SelectItem value="Kepala satuan penertiban">Kepala satuan penertiban</SelectItem>
-                                                        <SelectItem value="Pejabat Penatausahaan Pengguna Barang">Pejabat Penatausahaan Pengguna Barang</SelectItem>
+                                                        <SelectItem value="Kepala Sub Bagian Tata Usaha">Kepala Sub Bagian Tata Usaha</SelectItem>
                                                         <SelectItem value="Pengurus Barang">Pengurus Barang</SelectItem>
                                                     </SelectContent>
                                                 </Select>
@@ -491,7 +491,7 @@ export default function GuestRequestCreate({ warehouses, products }: Props) {
                                                         <SelectItem value="Kepala satuan sarana dan prasarana">Kepala satuan sarana dan prasarana</SelectItem>
                                                         <SelectItem value="Kepala satuan pelayanan">Kepala satuan pelayanan</SelectItem>
                                                         <SelectItem value="Kepala satuan penertiban">Kepala satuan penertiban</SelectItem>
-                                                        <SelectItem value="Pejabat Penatausahaan Pengguna Barang">Pejabat Penatausahaan Pengguna Barang</SelectItem>
+                                                        <SelectItem value="Kepala Sub Bagian Tata Usaha">Kepala Sub Bagian Tata Usaha</SelectItem>
                                                         <SelectItem value="Pengurus Barang">Pengurus Barang</SelectItem>
                                                     </SelectContent>
                                                 </Select>
