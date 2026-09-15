@@ -146,7 +146,7 @@ export default function GuestRequestCreate({ warehouses, products }: Props) {
 
         const stockQty = getProductStock(product, data.warehouse_id);
         if (itemQty > stockQty) {
-            toast.error(`Kuantitas melebihi stok yang tersedia (${stockQty} ${product.unit?.symbol || 'pcs'}).`);
+            toast.error('Kuantitas melebihi stok yang tersedia pada gudang ini.');
             return;
         }
 
@@ -154,7 +154,7 @@ export default function GuestRequestCreate({ warehouses, products }: Props) {
         if (exists) {
             const newQty = exists.qty_requested + itemQty;
             if (newQty > stockQty) {
-                toast.error(`Kuantitas total yang diajukan (${newQty}) melebihi stok yang tersedia (${stockQty}).`);
+                toast.error('Kuantitas total yang diajukan melebihi stok yang tersedia pada gudang ini.');
                 return;
             }
             setData('items', data.items.map((item) =>
@@ -626,14 +626,11 @@ export default function GuestRequestCreate({ warehouses, products }: Props) {
                                                             <SelectValue placeholder="Cari / Pilih Nama Barang" />
                                                         </SelectTrigger>
                                                         <SelectContent className="rounded-xl border-slate-200 dark:border-zinc-800 max-h-72">
-                                                            {filteredProducts.map((p) => {
-                                                                const stockQty = getProductStock(p, data.warehouse_id);
-                                                                return (
-                                                                    <SelectItem key={p.id} value={String(p.id)}>
-                                                                        {p.name} (Tersedia: {stockQty} {p.unit?.symbol || 'pcs'})
-                                                                    </SelectItem>
-                                                                );
-                                                            })}
+                                                            {filteredProducts.map((p) => (
+                                                                <SelectItem key={p.id} value={String(p.id)}>
+                                                                    {p.name}
+                                                                </SelectItem>
+                                                            ))}
                                                         </SelectContent>
                                                     </Select>
                                                 </div>
