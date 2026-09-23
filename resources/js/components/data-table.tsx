@@ -13,6 +13,7 @@ interface DataTableProps<T> {
     searchPlaceholder?: string;
     onAddClick?: () => void;
     addText?: string;
+    extraActions?: React.ReactNode;
     emptyText?: string;
     paginationLinks?: any; // Inertia pagination links
 }
@@ -26,6 +27,7 @@ export default function DataTable<T>({
     searchPlaceholder = 'Cari...',
     onAddClick,
     addText = 'Tambah Baru',
+    extraActions,
     emptyText = 'Tidak ada data ditemukan.',
     paginationLinks,
 }: DataTableProps<T>) {
@@ -47,12 +49,15 @@ export default function DataTable<T>({
                     <div />
                 )}
 
-                {onAddClick && (
-                    <Button onClick={onAddClick} size="sm" className="h-9 gap-1.5">
-                        <Plus className="h-4 w-4" />
-                        <span>{addText}</span>
-                    </Button>
-                )}
+                <div className="flex items-center gap-2">
+                    {extraActions}
+                    {onAddClick && (
+                        <Button onClick={onAddClick} size="sm" className="h-9 gap-1.5">
+                            <Plus className="h-4 w-4" />
+                            <span>{addText}</span>
+                        </Button>
+                    )}
+                </div>
             </div>
 
             <div className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden">

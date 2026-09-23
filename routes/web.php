@@ -90,6 +90,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('warehouses/{warehouse}/toggle-active', [WarehouseController::class, 'toggleActive'])->name('warehouses.toggle-active');
     Route::post('warehouses/{warehouse}/assign-users', [WarehouseController::class, 'assignUsers'])->name('warehouses.assign-users');
 
+    Route::post('products/import', [ProductController::class, 'import'])->name('products.import');
+    Route::get('products/template', [ProductController::class, 'downloadTemplate'])->name('products.template');
     Route::resource('products', ProductController::class)->only(['index', 'store', 'show', 'update']);
     Route::patch('products/{product}/toggle-active', [ProductController::class, 'toggleActive'])->name('products.toggle-active');
     Route::patch('products/{product}/toggle-hold', [ProductController::class, 'toggleHold'])->name('products.toggle-hold');
