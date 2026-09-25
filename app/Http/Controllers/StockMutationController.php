@@ -35,11 +35,15 @@ class StockMutationController extends Controller
             });
         }
 
-        if ($request->has('search')) {
+        if ($request->filled('search')) {
             $search = $request->input('search');
-            $query->whereHas('product', function($q) use ($search) {
-                $q->where('name', 'like', '%' . $search . '%');
-            })->orWhere('mutation_number', 'like', '%' . $search . '%');
+            $query->where(function($q) use ($search) {
+                $q->whereHas('product', function($pq) use ($search) {
+                    $pq->where('name', 'ilike', '%' . $search . '%')
+                      ->orWhere('code', 'ilike', '%' . $search . '%')
+                      ->orWhere('sku', 'ilike', '%' . $search . '%');
+                })->orWhere('mutation_number', 'ilike', '%' . $search . '%');
+            });
         }
 
         if ($request->has('status') && $request->input('status') !== 'all') {

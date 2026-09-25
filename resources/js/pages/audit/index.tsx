@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import DataTable from '@/components/data-table';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
@@ -48,21 +48,15 @@ export default function AuditLogsIndex({ logs, modules, filters }: Props) {
     };
 
     const reloadPage = (searchVal: string, moduleVal: string) => {
-        const url = new URL(window.location.href);
-        if (searchVal) {
-            url.searchParams.set('search', searchVal);
-        } else {
-            url.searchParams.delete('search');
-        }
+        const params: Record<string, string> = {};
+        if (searchVal) params.search = searchVal;
+        if (moduleVal && moduleVal !== 'all') params.module = moduleVal;
 
-        if (moduleVal && moduleVal !== 'all') {
-            url.searchParams.set('module', moduleVal);
-        } else {
-            url.searchParams.delete('module');
-        }
-
-        url.searchParams.delete('page');
-        window.location.href = url.pathname + url.search;
+        router.get('/audit', params, {
+            preserveState: true,
+            replace: true,
+            preserveScroll: true,
+        });
     };
 
     const getModuleBadge = (module: string) => {

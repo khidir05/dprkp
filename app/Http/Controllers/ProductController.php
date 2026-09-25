@@ -25,17 +25,22 @@ class ProductController extends Controller
             ->with(['category', 'unit'])
             ->withSum('stocks as total_stock', 'qty');
 
-        if ($request->has('search')) {
+        if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function($q) use ($search) {
-                $q->where('name', 'like', '%' . $search . '%')
-                  ->orWhere('code', 'like', '%' . $search . '%')
-                  ->orWhere('sku', 'like', '%' . $search . '%')
-                  ->orWhere('description', 'like', '%' . $search . '%');
+                $q->where('name', 'ilike', '%' . $search . '%')
+                  ->orWhere('code', 'ilike', '%' . $search . '%')
+                  ->orWhere('sku', 'ilike', '%' . $search . '%')
+                  ->orWhere('brand', 'ilike', '%' . $search . '%')
+                  ->orWhere('packaging', 'ilike', '%' . $search . '%')
+                  ->orWhere('description', 'ilike', '%' . $search . '%')
+                  ->orWhereHas('category', function($cat) use ($search) {
+                      $cat->where('name', 'ilike', '%' . $search . '%');
+                  });
             });
         }
 
-        if ($request->has('category_id') && $request->input('category_id') !== '') {
+        if ($request->filled('category_id') && $request->input('category_id') !== 'all') {
             $query->where('category_id', $request->input('category_id'));
         }
 

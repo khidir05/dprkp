@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import DataTable from '@/components/data-table';
 import ConfirmDialog from '@/components/confirm-dialog';
@@ -36,15 +36,13 @@ export default function CategoriesIndex({ categories, filters, canManage }: Prop
     // Handle search query
     const handleSearchChange = (val: string) => {
         setSearch(val);
-        // Throttle/debounce reload or just simple reload
-        const url = new URL(window.location.href);
-        if (val) {
-            url.searchParams.set('search', val);
-        } else {
-            url.searchParams.delete('search');
-        }
-        url.searchParams.delete('page'); // Reset to first page
-        window.location.href = url.pathname + url.search;
+        const params: Record<string, string> = {};
+        if (val) params.search = val;
+        router.get('/categories', params, {
+            preserveState: true,
+            replace: true,
+            preserveScroll: true,
+        });
     };
 
     const openAddDialog = () => {

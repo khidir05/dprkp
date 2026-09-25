@@ -63,14 +63,15 @@ export default function RestockIndex({ restocks, filters, role }: Props) {
 
     const handleStatusFilterChange = (val: string) => {
         setSelectedStatus(val);
-        const url = new URL(window.location.href);
+        const params: Record<string, string> = {};
         if (val && val !== 'all') {
-            url.searchParams.set('status', val);
-        } else {
-            url.searchParams.delete('status');
+            params.status = val;
         }
-        url.searchParams.delete('page');
-        window.location.href = url.pathname + url.search;
+        router.get('/restock', params, {
+            preserveState: true,
+            replace: true,
+            preserveScroll: true,
+        });
     };
 
     const handleStatusUpdate = (restock: RestockItemType, status: 'reviewed' | 'processed' | 'closed') => {

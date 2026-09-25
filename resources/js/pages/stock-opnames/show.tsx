@@ -1,4 +1,4 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -78,6 +78,9 @@ export default function StockOpnameShow({ opname, role }: Props) {
         }
     };
 
+    const { auth } = usePage().props as any;
+    const currentRole = role || auth?.user?.role_model?.code || auth?.user?.roleModel?.code;
+
     return (
         <>
             <Head title={`Opname Stok #${opname.opname_number}`} />
@@ -100,7 +103,7 @@ export default function StockOpnameShow({ opname, role }: Props) {
 
                     {opname.status === 'draft' && (
                         <div className="flex items-center gap-2">
-                            {(role === 'admin_gudang' || role === 'super_admin') && (
+                            {(currentRole === 'admin_gudang' || currentRole === 'super_admin') && (
                                 <Button asChild variant="outline" size="sm" className="gap-1.5 border-amber-200 text-amber-600 hover:bg-amber-50">
                                     <Link href={`/stock-opnames/${opname.id}/edit`}>
                                         <Pencil className="h-4 w-4" />
@@ -109,7 +112,7 @@ export default function StockOpnameShow({ opname, role }: Props) {
                                 </Button>
                             )}
 
-                            {(role === 'manager' || role === 'super_admin') && (
+                            {(currentRole === 'manager' || currentRole === 'super_admin') && (
                                 <>
                                     <Button variant="outline" size="sm" onClick={handleCancel} className="gap-1.5 text-red-600 hover:bg-red-50 hover:text-red-700">
                                         <X className="h-4 w-4" />
@@ -204,10 +207,10 @@ export default function StockOpnameShow({ opname, role }: Props) {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             {(() => {
-                                const totalItems = opname.items.length;
-                                const differenceCount = opname.items.filter(item => item.qty_difference !== 0).length;
-                                const totalSystem = opname.items.reduce((sum, item) => sum + item.qty_system, 0);
-                                const totalPhysical = opname.items.reduce((sum, item) => sum + item.qty_physical, 0);
+                                const totalItems = opname.items?.length || 0;
+                                const differenceCount = (opname.items || []).filter(item => item.qty_difference !== 0).length;
+                                const totalSystem = (opname.items || []).reduce((sum, item) => sum + item.qty_system, 0);
+                                const totalPhysical = (opname.items || []).reduce((sum, item) => sum + item.qty_physical, 0);
                                 const netDifference = totalPhysical - totalSystem;
 
                                 return (
@@ -261,7 +264,7 @@ export default function StockOpnameShow({ opname, role }: Props) {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {opname.items.map((item) => {
+                                    {(opname.items || []).map((item) => {
                                         const diff = item.qty_difference;
                                         let diffColor = "text-neutral-600";
                                         let diffText = "0";
@@ -285,10 +288,10 @@ export default function StockOpnameShow({ opname, role }: Props) {
                                                     </div>
                                                 </td>
                                                 <td className="p-4 font-mono text-center text-neutral-700">
-                                                    {item.qty_system} {item.product?.unit?.symbol}
+                                                    {item.qty_system} {item.product?.unit?.symbol || item.product?.unit?.name}
                                                 </td>
                                                 <td className="p-4 font-mono font-bold text-center text-neutral-900 dark:text-neutral-100">
-                                                    {item.qty_physical} {item.product?.unit?.symbol}
+                                                    {item.qty_physical} {item.product?.unit?.symbol || item.product?.unit?.name}
                                                 </td>
                                                 <td className="p-4 font-mono text-center">
                                                     <span className={diffColor}>{diffText}</span>
@@ -309,19 +312,17 @@ export default function StockOpnameShow({ opname, role }: Props) {
     );
 }
 
-const breadcrumbs = (opname: StockOpname): BreadcrumbItem[] => [
+const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Opname Stok',
         href: '/stock-opnames',
     },
     {
-        title: `Detail #${opname.opname_number}`,
-        href: `/stock-opnames/${opname.id}`,
+        title: 'Detail Opname',
+        href: '',
     },
 ];
 
-StockOpnameShow.layout = (page: any) => {
-    return {
-        breadcrumbs: breadcrumbs(page.props.opname),
-    };
+StockOpnameShow.layout = {
+    breadcrumbs,
 };

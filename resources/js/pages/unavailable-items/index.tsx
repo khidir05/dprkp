@@ -64,14 +64,15 @@ export default function UnavailableItemsIndex({ items, products, filters, role }
 
     const handleStatusFilterChange = (val: string) => {
         setSelectedStatus(val);
-        const url = new URL(window.location.href);
+        const params: Record<string, string> = {};
         if (val && val !== 'all') {
-            url.searchParams.set('status', val);
-        } else {
-            url.searchParams.delete('status');
+            params.status = val;
         }
-        url.searchParams.delete('page');
-        window.location.href = url.pathname + url.search;
+        router.get('/unavailable-items', params, {
+            preserveState: true,
+            replace: true,
+            preserveScroll: true,
+        });
     };
 
     const handleCreateSubmit = (e: React.FormEvent) => {

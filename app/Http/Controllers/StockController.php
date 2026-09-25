@@ -24,16 +24,25 @@ class StockController extends Controller
             $query->whereIn('warehouse_id', $assignedWarehouseIds);
         }
 
-        if ($request->has('search')) {
+        if ($request->filled('search')) {
             $search = $request->input('search');
-            $query->whereHas('product', function($q) use ($search) {
-                $q->where('name', 'like', '%' . $search . '%')
-                  ->orWhere('code', 'like', '%' . $search . '%')
-                  ->orWhere('sku', 'like', '%' . $search . '%');
+            $query->where(function($q) use ($search) {
+                $q->whereHas('product', function($pq) use ($search) {
+                    $pq->where('name', 'ilike', '%' . $search . '%')
+                      ->orWhere('code', 'ilike', '%' . $search . '%')
+                      ->orWhere('sku', 'ilike', '%' . $search . '%')
+                      ->orWhere('brand', 'ilike', '%' . $search . '%')
+                      ->orWhereHas('category', function($cat) use ($search) {
+                          $cat->where('name', 'ilike', '%' . $search . '%');
+                      });
+                })->orWhereHas('warehouse', function($wh) use ($search) {
+                    $wh->where('name', 'ilike', '%' . $search . '%')
+                      ->orWhere('code', 'ilike', '%' . $search . '%');
+                });
             });
         }
 
-        if ($request->has('warehouse_id') && $request->input('warehouse_id') !== 'all') {
+        if ($request->filled('warehouse_id') && $request->input('warehouse_id') !== 'all') {
             $query->where('warehouse_id', $request->input('warehouse_id'));
         }
 

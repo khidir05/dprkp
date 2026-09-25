@@ -34,11 +34,11 @@ class ItemRequestController extends Controller
         }
 
         // Search & Status filters
-        if ($request->has('search')) {
+        if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function($q) use ($search) {
-                $q->where('request_number', 'like', '%' . $search . '%')
-                  ->orWhere('notes', 'like', '%' . $search . '%');
+                $q->where('request_number', 'ilike', '%' . $search . '%')
+                  ->orWhere('notes', 'ilike', '%' . $search . '%');
             });
         }
 

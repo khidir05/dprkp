@@ -35,12 +35,12 @@ class InboundController extends Controller
             $query->whereIn('warehouse_id', $assignedWarehouseIds);
         }
 
-        if ($request->has('search')) {
+        if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function($q) use ($search) {
-                $q->where('transaction_number', 'like', '%' . $search . '%')
-                  ->orWhere('reference_document', 'like', '%' . $search . '%')
-                  ->orWhere('notes', 'like', '%' . $search . '%');
+                $q->where('transaction_number', 'ilike', '%' . $search . '%')
+                  ->orWhere('reference_document', 'ilike', '%' . $search . '%')
+                  ->orWhere('notes', 'ilike', '%' . $search . '%');
             });
         }
 

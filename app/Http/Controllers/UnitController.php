@@ -17,10 +17,12 @@ class UnitController extends Controller
     {
         $query = Unit::query();
 
-        if ($request->has('search')) {
+        if ($request->filled('search')) {
             $search = $request->input('search');
-            $query->where('name', 'like', '%' . $search . '%')
-                  ->orWhere('symbol', 'like', '%' . $search . '%');
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'ilike', '%' . $search . '%')
+                  ->orWhere('symbol', 'ilike', '%' . $search . '%');
+            });
         }
 
         $units = $query->orderBy('name')

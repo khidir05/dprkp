@@ -43,7 +43,8 @@ export default function StocksIndex({ stocks, warehouses, filters, role }: Props
 
         router.get('/stocks', params, {
             preserveState: true,
-            replace: true
+            replace: true,
+            preserveScroll: true,
         });
     };
 

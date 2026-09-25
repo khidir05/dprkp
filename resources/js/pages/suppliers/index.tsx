@@ -35,14 +35,13 @@ export default function SuppliersIndex({ suppliers, filters, canManage }: Props)
 
     const handleSearchChange = (val: string) => {
         setSearch(val);
-        const url = new URL(window.location.href);
-        if (val) {
-            url.searchParams.set('search', val);
-        } else {
-            url.searchParams.delete('search');
-        }
-        url.searchParams.delete('page');
-        window.location.href = url.pathname + url.search;
+        const params: Record<string, string> = {};
+        if (val) params.search = val;
+        router.get('/suppliers', params, {
+            preserveState: true,
+            replace: true,
+            preserveScroll: true,
+        });
     };
 
     const openAddDialog = () => {

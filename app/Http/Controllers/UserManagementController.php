@@ -24,13 +24,13 @@ class UserManagementController extends Controller
 
         $query = User::query()->with(['roleModel', 'warehouses']);
 
-        if ($request->has('search')) {
+        if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function($q) use ($search) {
-                $q->where('name', 'like', '%' . $search . '%')
-                  ->orWhere('email', 'like', '%' . $search . '%')
-                  ->orWhere('username', 'like', '%' . $search . '%')
-                  ->orWhere('code_user', 'like', '%' . $search . '%');
+                $q->where('name', 'ilike', '%' . $search . '%')
+                  ->orWhere('email', 'ilike', '%' . $search . '%')
+                  ->orWhere('username', 'ilike', '%' . $search . '%')
+                  ->orWhere('code_user', 'ilike', '%' . $search . '%');
             });
         }
 

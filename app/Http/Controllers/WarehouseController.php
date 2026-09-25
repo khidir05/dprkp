@@ -18,11 +18,13 @@ class WarehouseController extends Controller
     {
         $query = Warehouse::query()->with('users');
 
-        if ($request->has('search')) {
+        if ($request->filled('search')) {
             $search = $request->input('search');
-            $query->where('name', 'like', '%' . $search . '%')
-                  ->orWhere('code', 'like', '%' . $search . '%')
-                  ->orWhere('address', 'like', '%' . $search . '%');
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'ilike', '%' . $search . '%')
+                  ->orWhere('code', 'ilike', '%' . $search . '%')
+                  ->orWhere('address', 'ilike', '%' . $search . '%');
+            });
         }
 
         $warehouses = $query->orderBy('code')

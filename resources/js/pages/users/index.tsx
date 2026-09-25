@@ -66,21 +66,15 @@ export default function UsersIndex({ users, roles, warehouses, filters }: Props)
     };
 
     const reloadPage = (searchVal: string, roleVal: string) => {
-        const url = new URL(window.location.href);
-        if (searchVal) {
-            url.searchParams.set('search', searchVal);
-        } else {
-            url.searchParams.delete('search');
-        }
+        const params: Record<string, string> = {};
+        if (searchVal) params.search = searchVal;
+        if (roleVal && roleVal !== 'all') params.role_id = roleVal;
 
-        if (roleVal && roleVal !== 'all') {
-            url.searchParams.set('role_id', roleVal);
-        } else {
-            url.searchParams.delete('role_id');
-        }
-
-        url.searchParams.delete('page');
-        window.location.href = url.pathname + url.search;
+        router.get('/users', params, {
+            preserveState: true,
+            replace: true,
+            preserveScroll: true,
+        });
     };
 
     const openAddDialog = () => {

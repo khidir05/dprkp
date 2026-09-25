@@ -52,14 +52,13 @@ export default function WarehousesIndex({ warehouses, assignableUsers, filters, 
 
     const handleSearchChange = (val: string) => {
         setSearch(val);
-        const url = new URL(window.location.href);
-        if (val) {
-            url.searchParams.set('search', val);
-        } else {
-            url.searchParams.delete('search');
-        }
-        url.searchParams.delete('page');
-        window.location.href = url.pathname + url.search;
+        const params: Record<string, string> = {};
+        if (val) params.search = val;
+        router.get('/warehouses', params, {
+            preserveState: true,
+            replace: true,
+            preserveScroll: true,
+        });
     };
 
     const openAddDialog = () => {

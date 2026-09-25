@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import DataTable from '@/components/data-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -77,7 +77,8 @@ export default function StockOpnameIndex({ opnames, filters, role }: Props) {
 
         router.get('/stock-opnames', params, {
             preserveState: true,
-            replace: true
+            replace: true,
+            preserveScroll: true,
         });
     };
 

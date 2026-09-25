@@ -95,21 +95,19 @@ export default function ProductsIndex({ products, categories, units, warehouses 
     };
 
     const reloadPage = (searchVal: string, catVal: string) => {
-        const url = new URL(window.location.href);
+        const params: Record<string, string> = {};
         if (searchVal) {
-            url.searchParams.set('search', searchVal);
-        } else {
-            url.searchParams.delete('search');
+            params.search = searchVal;
         }
-
         if (catVal && catVal !== 'all') {
-            url.searchParams.set('category_id', catVal);
-        } else {
-            url.searchParams.delete('category_id');
+            params.category_id = catVal;
         }
 
-        url.searchParams.delete('page');
-        window.location.href = url.pathname + url.search;
+        router.get('/products', params, {
+            preserveState: true,
+            replace: true,
+            preserveScroll: true,
+        });
     };
 
     const openAddDialog = () => {

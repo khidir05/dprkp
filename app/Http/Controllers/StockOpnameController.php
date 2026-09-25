@@ -21,24 +21,25 @@ class StockOpnameController extends Controller
     public function index(Request $request): Response
     {
         $user = $request->user();
-        if ($user->roleModel->code === 'pemohon') {
+        $roleCode = $user->roleModel?->code;
+        if ($roleCode === 'pemohon') {
             abort(403, 'Akses ditolak. Pemohon tidak dapat melihat opname stok.');
         }
 
         $query = StockOpname::query()->with(['warehouse', 'createdBy', 'approvedBy']);
 
         // Filter for Admin Gudang (only see opnames in their assigned warehouses)
-        if ($user->roleModel->code === 'admin_gudang') {
+        if ($roleCode === 'admin_gudang') {
             $assignedWarehouseIds = $user->warehouses()->pluck('warehouses.id');
             $query->whereIn('warehouse_id', $assignedWarehouseIds);
         }
 
-        if ($request->has('search')) {
+        if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function($q) use ($search) {
-                $q->where('opname_number', 'like', '%' . $search . '%')
+                $q->where('opname_number', 'ilike', '%' . $search . '%')
                   ->orWhereHas('warehouse', function($wh) use ($search) {
-                      $wh->where('name', 'like', '%' . $search . '%');
+                      $wh->where('name', 'ilike', '%' . $search . '%');
                   });
             });
         }
@@ -61,7 +62,7 @@ class StockOpnameController extends Controller
         return Inertia::render('stock-opnames/index', [
             'opnames' => $opnames,
             'filters' => $request->only(['search', 'status', 'start_date', 'end_date']),
-            'role' => $user->roleModel->code,
+            'role' => $roleCode,
         ]);
     }
 
@@ -71,13 +72,14 @@ class StockOpnameController extends Controller
     public function create(Request $request): Response
     {
         $user = $request->user();
-        if ($user->roleModel->code !== 'admin_gudang' && $user->roleModel->code !== 'super_admin') {
+        $roleCode = $user->roleModel?->code;
+        if ($roleCode !== 'admin_gudang' && $roleCode !== 'super_admin') {
             abort(403, 'Akses ditolak. Hanya Admin Gudang atau Super Admin yang dapat membuat opname stok.');
         }
 
         // Get allowed warehouses
-        if ($user->roleModel->code === 'admin_gudang') {
-            $warehouses = $user->warehouses()->where('is_active', true)->get(['warehouses.id', 'warehouses.name', 'warehouses.code']);
+        if ($roleCode === 'admin_gudang') {
+            $warehouses = $user->warehouses()->where('warehouses.is_active', true)->get(['warehouses.id', 'warehouses.name', 'warehouses.code']);
         } else {
             $warehouses = Warehouse::where('is_active', true)->get(['id', 'name', 'code']);
         }
@@ -89,7 +91,7 @@ class StockOpnameController extends Controller
         $products = [];
 
         if ($warehouseId) {
-            if ($user->roleModel->code === 'admin_gudang') {
+            if ($roleCode === 'admin_gudang') {
                 $isAssigned = $user->warehouses()->where('warehouses.id', $warehouseId)->exists();
                 if (!$isAssigned) {
                     abort(403, 'Akses ditolak ke gudang ini.');
@@ -105,7 +107,7 @@ class StockOpnameController extends Controller
                     'name' => $product->name,
                     'code' => $product->code,
                     'sku' => $product->sku,
-                    'unit' => $product->unit?->name ?? '',
+                    'unit' => $product->unit?->name ?? ($product->unit?->symbol ?? ''),
                     'qty_system' => $stocks[$product->id] ?? 0,
                 ];
             }
@@ -124,7 +126,8 @@ class StockOpnameController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $user = $request->user();
-        if ($user->roleModel->code !== 'admin_gudang' && $user->roleModel->code !== 'super_admin') {
+        $roleCode = $user->roleModel?->code;
+        if ($roleCode !== 'admin_gudang' && $roleCode !== 'super_admin') {
             abort(403, 'Akses ditolak.');
         }
 
@@ -139,7 +142,7 @@ class StockOpnameController extends Controller
             'items.*.notes' => 'nullable|string',
         ]);
 
-        if ($user->roleModel->code === 'admin_gudang') {
+        if ($roleCode === 'admin_gudang') {
             $isAssigned = $user->warehouses()->where('warehouses.id', $validated['warehouse_id'])->exists();
             if (!$isAssigned) {
                 abort(403, 'Anda tidak memiliki hak akses untuk mencatat opname stok di gudang ini.');
@@ -188,11 +191,12 @@ class StockOpnameController extends Controller
     public function show(Request $request, StockOpname $stockOpname): Response
     {
         $user = $request->user();
-        if ($user->roleModel->code === 'pemohon') {
+        $roleCode = $user->roleModel?->code;
+        if ($roleCode === 'pemohon') {
             abort(403, 'Akses ditolak.');
         }
 
-        if ($user->roleModel->code === 'admin_gudang') {
+        if ($roleCode === 'admin_gudang') {
             $isAssigned = $user->warehouses()->where('warehouses.id', $stockOpname->warehouse_id)->exists();
             if (!$isAssigned) {
                 abort(403, 'Akses ditolak.');
@@ -203,17 +207,18 @@ class StockOpnameController extends Controller
 
         return Inertia::render('stock-opnames/show', [
             'opname' => $stockOpname,
-            'role' => $user->roleModel->code,
+            'role' => $roleCode,
         ]);
     }
 
     /**
      * Show the form for editing the specified stock opname (only if draft).
      */
-    public function edit(Request $request, StockOpname $stockOpname): Response
+    public function edit(Request $request, StockOpname $stockOpname): Response|RedirectResponse
     {
         $user = $request->user();
-        if ($user->roleModel->code !== 'admin_gudang' && $user->roleModel->code !== 'super_admin') {
+        $roleCode = $user->roleModel?->code;
+        if ($roleCode !== 'admin_gudang' && $roleCode !== 'super_admin') {
             abort(403, 'Akses ditolak.');
         }
 
@@ -222,7 +227,7 @@ class StockOpnameController extends Controller
                 ->with('error', 'Hanya draf opname stok yang dapat diubah.');
         }
 
-        if ($user->roleModel->code === 'admin_gudang') {
+        if ($roleCode === 'admin_gudang') {
             $isAssigned = $user->warehouses()->where('warehouses.id', $stockOpname->warehouse_id)->exists();
             if (!$isAssigned) {
                 abort(403, 'Akses ditolak.');
@@ -231,8 +236,24 @@ class StockOpnameController extends Controller
 
         $stockOpname->load(['warehouse', 'items.product.unit']);
 
+        $allProducts = Product::where('is_active', true)->with('unit')->orderBy('name')->get();
+        $stocks = Stock::where('warehouse_id', $stockOpname->warehouse_id)->pluck('qty', 'product_id');
+
+        $products = [];
+        foreach ($allProducts as $product) {
+            $products[] = [
+                'id' => $product->id,
+                'name' => $product->name,
+                'code' => $product->code,
+                'sku' => $product->sku,
+                'unit' => $product->unit?->name ?? ($product->unit?->symbol ?? ''),
+                'qty_system' => $stocks[$product->id] ?? 0,
+            ];
+        }
+
         return Inertia::render('stock-opnames/edit', [
             'opname' => $stockOpname,
+            'products' => $products,
         ]);
     }
 
@@ -242,7 +263,8 @@ class StockOpnameController extends Controller
     public function update(Request $request, StockOpname $stockOpname): RedirectResponse
     {
         $user = $request->user();
-        if ($user->roleModel->code !== 'admin_gudang' && $user->roleModel->code !== 'super_admin') {
+        $roleCode = $user->roleModel?->code;
+        if ($roleCode !== 'admin_gudang' && $roleCode !== 'super_admin') {
             abort(403, 'Akses ditolak.');
         }
 
@@ -250,7 +272,7 @@ class StockOpnameController extends Controller
             abort(400, 'Hanya draf opname stok yang dapat diupdate.');
         }
 
-        if ($user->roleModel->code === 'admin_gudang') {
+        if ($roleCode === 'admin_gudang') {
             $isAssigned = $user->warehouses()->where('warehouses.id', $stockOpname->warehouse_id)->exists();
             if (!$isAssigned) {
                 abort(403, 'Akses ditolak.');
@@ -314,7 +336,8 @@ class StockOpnameController extends Controller
     public function approve(Request $request, StockOpname $stockOpname): RedirectResponse
     {
         $user = $request->user();
-        if ($user->roleModel->code !== 'manager' && $user->roleModel->code !== 'super_admin') {
+        $roleCode = $user->roleModel?->code;
+        if ($roleCode !== 'manager' && $roleCode !== 'super_admin') {
             abort(403, 'Hanya Manager atau Super Admin yang dapat menyetujui opname stok.');
         }
 
@@ -355,7 +378,8 @@ class StockOpnameController extends Controller
     public function cancel(Request $request, StockOpname $stockOpname): RedirectResponse
     {
         $user = $request->user();
-        if ($user->roleModel->code !== 'manager' && $user->roleModel->code !== 'super_admin') {
+        $roleCode = $user->roleModel?->code;
+        if ($roleCode !== 'manager' && $roleCode !== 'super_admin') {
             abort(403, 'Hanya Manager atau Super Admin yang dapat membatalkan opname stok.');
         }
 

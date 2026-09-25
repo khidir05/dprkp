@@ -70,19 +70,18 @@ export default function AlertsIndex({ alerts, warehouses, filters, role }: Props
     const isManager = role === 'manager' || role === 'super_admin';
 
     const handleFiltersChange = (statusVal: string, whVal: string) => {
-        const url = new URL(window.location.href);
+        const params: Record<string, string> = {};
         if (statusVal && statusVal !== 'all') {
-            url.searchParams.set('status', statusVal);
-        } else {
-            url.searchParams.delete('status');
+            params.status = statusVal;
         }
         if (whVal && whVal !== 'all') {
-            url.searchParams.set('warehouse_id', whVal);
-        } else {
-            url.searchParams.delete('warehouse_id');
+            params.warehouse_id = whVal;
         }
-        url.searchParams.delete('page');
-        window.location.href = url.pathname + url.search;
+        router.get('/alerts', params, {
+            preserveState: true,
+            replace: true,
+            preserveScroll: true,
+        });
     };
 
     const handleStatusFilterChange = (val: string) => {

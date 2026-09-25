@@ -1,8 +1,9 @@
 import * as React from 'react';
+import { router } from '@inertiajs/react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, X } from 'lucide-react';
 
 interface DataTableProps<T> {
     headers: string[];
@@ -22,7 +23,7 @@ export default function DataTable<T>({
     headers,
     items,
     renderRow,
-    searchQuery,
+    searchQuery = '',
     onSearchChange,
     searchPlaceholder = 'Cari...',
     onAddClick,
@@ -31,6 +32,48 @@ export default function DataTable<T>({
     emptyText = 'Tidak ada data ditemukan.',
     paginationLinks,
 }: DataTableProps<T>) {
+    const [localSearch, setLocalSearch] = React.useState(searchQuery);
+    const isFirstRender = React.useRef(true);
+
+    // Synchronize local search state when prop changes from outside (e.g., reset or URL change)
+    React.useEffect(() => {
+        setLocalSearch(searchQuery);
+    }, [searchQuery]);
+
+    // Debounce triggering onSearchChange
+    React.useEffect(() => {
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+            return;
+        }
+
+        if (onSearchChange === undefined) return;
+
+        const timer = setTimeout(() => {
+            if (localSearch !== searchQuery) {
+                onSearchChange(localSearch);
+            }
+        }, 350);
+
+        return () => clearTimeout(timer);
+    }, [localSearch, onSearchChange, searchQuery]);
+
+    const handleClearSearch = () => {
+        setLocalSearch('');
+        if (onSearchChange) {
+            onSearchChange('');
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            if (onSearchChange && localSearch !== searchQuery) {
+                onSearchChange(localSearch);
+            }
+        }
+    };
+
     return (
         <div className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
@@ -40,10 +83,20 @@ export default function DataTable<T>({
                         <Input
                             type="text"
                             placeholder={searchPlaceholder}
-                            value={searchQuery || ''}
-                            onChange={(e) => onSearchChange(e.target.value)}
-                            className="pl-9 h-9"
+                            value={localSearch}
+                            onChange={(e) => setLocalSearch(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            className="pl-9 pr-8 h-9"
                         />
+                        {localSearch && (
+                            <button
+                                type="button"
+                                onClick={handleClearSearch}
+                                className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        )}
                     </div>
                 ) : (
                     <div />
@@ -108,7 +161,10 @@ export default function DataTable<T>({
                                 disabled={!link.url}
                                 onClick={() => {
                                     if (link.url) {
-                                        window.location.href = link.url;
+                                        router.visit(link.url, {
+                                            preserveState: true,
+                                            preserveScroll: true,
+                                        });
                                     }
                                 }}
                                 className="h-9 px-3"
