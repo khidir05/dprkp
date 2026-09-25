@@ -94,6 +94,10 @@ export default function StockOpnameIndex({ opnames, filters, role }: Props) {
         }
     };
 
+    const { auth } = usePage().props as any;
+    const currentRole = role || auth.user?.role_model?.code;
+    const canManage = currentRole === 'admin_gudang' || currentRole === 'super_admin';
+
     return (
         <>
             <Head title="Opname Stok" />
@@ -141,7 +145,7 @@ export default function StockOpnameIndex({ opnames, filters, role }: Props) {
                             </Select>
                         </div>
 
-                        {(role === 'admin_gudang' || role === 'super_admin') && (
+                        {canManage && (
                             <Button asChild size="sm" className="h-9 gap-1.5 bg-primary text-primary-foreground">
                                 <Link href="/stock-opnames/create">
                                     <Plus className="h-4 w-4" />
@@ -159,7 +163,7 @@ export default function StockOpnameIndex({ opnames, filters, role }: Props) {
                     onSearchChange={handleSearchChange}
                     searchPlaceholder="Cari no. opname..."
                     paginationLinks={opnames.links}
-                    renderRow={(opname, idx) => {
+                    renderRow={(opname) => {
                         return (
                             <tr key={opname.id} className="border-b transition-colors hover:bg-muted/50">
                                 <td className="p-4 font-semibold font-mono text-sm">{opname.opname_number}</td>
@@ -178,19 +182,21 @@ export default function StockOpnameIndex({ opnames, filters, role }: Props) {
                                     {opname.created_by?.name || '-'}
                                 </td>
                                 <td className="p-4">{getStatusBadge(opname.status)}</td>
-                                <td className="p-4 flex items-center gap-2">
-                                    <Button asChild variant="outline" size="icon" className="h-8 w-8 text-neutral-600">
-                                        <Link href={`/stock-opnames/${opname.id}`}>
-                                            <Eye className="h-4 w-4" />
-                                        </Link>
-                                    </Button>
-                                    {opname.status === 'draft' && (role === 'admin_gudang' || role === 'super_admin') && (
-                                        <Button asChild variant="outline" size="icon" className="h-8 w-8 text-amber-600 border-amber-200 hover:bg-amber-50">
-                                            <Link href={`/stock-opnames/${opname.id}/edit`}>
-                                                <Pencil className="h-4 w-4" />
+                                <td className="p-4">
+                                    <div className="flex items-center gap-1.5">
+                                        <Button asChild variant="outline" size="icon" className="h-8 w-8 text-neutral-600 hover:text-neutral-900" title="Lihat Detail">
+                                            <Link href={`/stock-opnames/${opname.id}`}>
+                                                <Eye className="h-4 w-4" />
                                             </Link>
                                         </Button>
-                                    )}
+                                        {opname.status === 'draft' && canManage && (
+                                            <Button asChild variant="outline" size="icon" className="h-8 w-8 text-amber-600 border-amber-200 hover:bg-amber-50" title="Edit Draf">
+                                                <Link href={`/stock-opnames/${opname.id}/edit`}>
+                                                    <Pencil className="h-4 w-4" />
+                                                </Link>
+                                            </Button>
+                                        )}
+                                    </div>
                                 </td>
                             </tr>
                         );
