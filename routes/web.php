@@ -63,7 +63,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('mutations/{mutation}/reject', [StockMutationController::class, 'reject'])->name('mutations.reject');
 
     // Stock Opname Routes
-    Route::resource('stock-opnames', StockOpnameController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update']);
+    Route::resource('stock-opnames', StockOpnameController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update'])->parameters([
+        'stock-opnames' => 'stockOpname'
+    ]);
     Route::patch('stock-opnames/{stockOpname}/approve', [StockOpnameController::class, 'approve'])->name('stock-opnames.approve');
     Route::patch('stock-opnames/{stockOpname}/cancel', [StockOpnameController::class, 'cancel'])->name('stock-opnames.cancel');
 

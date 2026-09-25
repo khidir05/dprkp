@@ -83,6 +83,9 @@ class StockOpnameController extends Controller
         }
 
         $warehouseId = $request->input('warehouse_id');
+        if (!$warehouseId && $warehouses->count() === 1) {
+            $warehouseId = $warehouses->first()->id;
+        }
         $products = [];
 
         if ($warehouseId) {

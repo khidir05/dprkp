@@ -216,23 +216,40 @@ export default function ProductsIndex({ products, categories, units, warehouses 
                 // Headers row (index 0)
                 const headerRow = (rawData[0] || []).map((h: any) => String(h).toLowerCase().trim());
 
-                // Find column index helpers
+                // Find column index helpers with exact priority and substring fallback
                 const findColIdx = (keywords: string[]) => {
-                    return headerRow.findIndex((h: string) =>
-                        keywords.some((k) => h.includes(k))
-                    );
+                    const exactIdx = headerRow.findIndex((h: string) => keywords.some((k) => h === k));
+                    if (exactIdx !== -1) return exactIdx;
+                    return headerRow.findIndex((h: string) => keywords.some((k) => h.includes(k)));
                 };
 
-                const colCode = findColIdx(['kode barang', 'kode', 'code']);
-                const colSku = findColIdx(['sku']);
-                const colName = findColIdx(['nama barang', 'nama', 'name', 'barang', 'produk']);
-                const colCat = findColIdx(['kategori', 'category']);
-                const colUnit = findColIdx(['satuan', 'unit']);
+                const colCode = findColIdx(['kode barang', 'kode', 'code', 'product code']);
+                const colSku = findColIdx(['sku', 'kode sku']);
+                const colName = findColIdx(['nama barang', 'nama produk', 'nama', 'name', 'product name', 'barang', 'produk']);
+                const colCat = findColIdx(['kategori', 'category', 'jenis']);
+                const colUnit = findColIdx(['satuan', 'unit', 'uom']);
                 const colBrand = findColIdx(['merk', 'brand']);
                 const colPackaging = findColIdx(['kemasan', 'packaging']);
-                const colMinStock = findColIdx(['stok minimum', 'min stock', 'minimum_stock', 'minimum']);
-                const colInitStock = findColIdx(['stok awal', 'stok', 'qty', 'initial_stock', 'jumlah']);
-                const colDesc = findColIdx(['deskripsi', 'description', 'keterangan']);
+
+                // Minimum stock column detection
+                const colMinStock = headerRow.findIndex((h: string) =>
+                    ['stok minimum', 'min stock', 'minimum_stock', 'min_stock', 'stok min', 'minimum', 'min'].some((k) => h === k || h.includes(k))
+                );
+
+                // Initial stock column detection (MUST NOT be minimum stock)
+                const colInitStock = headerRow.findIndex((h: string) => {
+                    if (h.includes('min') || h.includes('minimum')) return false;
+                    return ['stok awal', 'initial_stock', 'stok_awal', 'qty awal', 'jumlah awal', 'stok masuk', 'stok fisik', 'total stok', 'stok', 'qty', 'jumlah', 'quantity', 'stock'].some((k) => h === k || h.includes(k));
+                });
+
+                const colDesc = findColIdx(['deskripsi', 'description', 'keterangan', 'spesifikasi']);
+
+                const parseNumber = (val: any) => {
+                    if (val === undefined || val === null || val === '') return 0;
+                    const clean = String(val).replace(/[^0-9.-]/g, '');
+                    const num = parseFloat(clean);
+                    return isNaN(num) ? 0 : Math.round(num);
+                };
 
                 const items: ParsedImportItem[] = [];
 
@@ -249,8 +266,8 @@ export default function ProductsIndex({ products, categories, units, warehouses 
                     const unit = colUnit !== -1 && row[colUnit] ? String(row[colUnit]).trim() : '';
                     const brand = colBrand !== -1 && row[colBrand] ? String(row[colBrand]).trim() : '';
                     const packaging = colPackaging !== -1 && row[colPackaging] ? String(row[colPackaging]).trim() : '';
-                    const minStock = colMinStock !== -1 && row[colMinStock] ? parseInt(String(row[colMinStock])) || 0 : 0;
-                    const initStock = colInitStock !== -1 && row[colInitStock] ? parseInt(String(row[colInitStock])) || 0 : 0;
+                    const minStock = colMinStock !== -1 ? parseNumber(row[colMinStock]) : 0;
+                    const initStock = colInitStock !== -1 ? parseNumber(row[colInitStock]) : 0;
                     const desc = colDesc !== -1 && row[colDesc] ? String(row[colDesc]).trim() : '';
 
                     items.push({
