@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Head, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import DataTable from '@/components/data-table';
@@ -25,6 +25,14 @@ type Props = {
 export default function StocksIndex({ stocks, warehouses, filters, role }: Props) {
     const [search, setSearch] = useState(filters.search || '');
     const [selectedWarehouseId, setSelectedWarehouseId] = useState(filters.warehouse_id || 'all');
+
+    useEffect(() => {
+        setSearch(filters.search || '');
+    }, [filters.search]);
+
+    useEffect(() => {
+        setSelectedWarehouseId(filters.warehouse_id || 'all');
+    }, [filters.warehouse_id]);
 
     const handleSearchChange = (val: string) => {
         setSearch(val);

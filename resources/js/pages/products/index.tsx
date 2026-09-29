@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Head, useForm, router, Link, usePage } from '@inertiajs/react';
 import DataTable from '@/components/data-table';
 import { Button } from '@/components/ui/button';
@@ -58,6 +58,14 @@ export default function ProductsIndex({ products, categories, units, warehouses 
 
     const [search, setSearch] = useState(filters.search || '');
     const [selectedCategoryId, setSelectedCategoryId] = useState(filters.category_id || 'all');
+
+    useEffect(() => {
+        setSearch(filters.search || '');
+    }, [filters.search]);
+
+    useEffect(() => {
+        setSelectedCategoryId(filters.category_id || 'all');
+    }, [filters.category_id]);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
