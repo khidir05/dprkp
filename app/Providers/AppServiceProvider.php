@@ -143,29 +143,53 @@ class AppServiceProvider extends ServiceProvider
             }
         });
 
-        \App\Models\InboundTransaction::created(function ($item) {
+        \App\Models\InboundTransaction::created(function ($item) use ($notifyManagers) {
             $whName = $item->warehouse?->name ?? 'Gudang';
-            \App\Services\AuditService::log('Barang Masuk', 'create', "Mencatat barang masuk #{$item->inbound_number} di {$whName}");
+            \App\Services\AuditService::log('Barang Masuk', 'create', "Mencatat barang masuk #{$item->transaction_number} di {$whName}");
+
+            // Notify managers & super admins
+            $notifyManagers(
+                "Barang Masuk Tercatat",
+                "Transaksi barang masuk #{$item->transaction_number} telah dicatat di {$whName}.",
+                'inbound',
+                'inbound_transactions',
+                $item->id
+            );
         });
 
-        \App\Models\OutboundTransaction::created(function ($item) use ($notify) {
+        \App\Models\OutboundTransaction::created(function ($item) use ($notify, $notifyManagers) {
             $reqNum = $item->itemRequest?->request_number ?? '';
+            $whName = $item->warehouse?->name ?? 'Gudang';
             $desc = "Mengirim keluar barang #{$item->transaction_number}";
             if ($reqNum) {
                 $desc .= " untuk permohonan #{$reqNum}";
             }
             \App\Services\AuditService::log('Barang Keluar', 'create', $desc);
             
+            // Notify Requester (if registered user)
             if ($item->itemRequest && $item->itemRequest->requester_id) {
                 $notify(
                     $item->itemRequest->requester_id,
                     "Barang Siap Diambil / Dikirim",
-                    "Barang untuk permohonan #{$reqNum} telah didepatch dari gudang. Silakan konfirmasi penerimaan jika barang sudah sampai.",
+                    "Barang untuk permohonan #{$reqNum} telah didispatch dari gudang. Silakan konfirmasi penerimaan jika barang sudah sampai.",
                     'info',
                     'item_requests',
                     $item->request_id
                 );
             }
+
+            // Notify managers & super admins
+            $outboundMsg = "Barang keluar #{$item->transaction_number} telah diproses dari {$whName}";
+            if ($reqNum) {
+                $outboundMsg .= " untuk permohonan #{$reqNum}";
+            }
+            $notifyManagers(
+                "Barang Keluar Diproses",
+                $outboundMsg . ".",
+                'outbound',
+                'outbound_transactions',
+                $item->request_id
+            );
         });
 
         \App\Models\GoodsReceipt::created(function ($item) use ($notify) {

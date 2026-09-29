@@ -134,10 +134,14 @@ export default function NotificationBell() {
         setOpen(false);
 
         // Redirect based on reference table
-        if (notification.ref_table === 'item_requests') {
+        if (notification.ref_table === 'item_requests' || notification.ref_table === 'outbound_transactions') {
             router.visit(`/requests/${notification.ref_id}`);
+        } else if (notification.ref_table === 'inbound_transactions') {
+            router.visit(`/inbound/${notification.ref_id}`);
         } else if (notification.ref_table === 'stock_mutations') {
             router.visit(`/mutations/${notification.ref_id}`);
+        } else if (notification.ref_table === 'stock_opnames') {
+            router.visit(`/stock-opnames/${notification.ref_id}`);
         } else if (notification.ref_table === 'stock_alerts') {
             router.visit('/alerts');
         } else if (notification.ref_table === 'restock_lists') {
