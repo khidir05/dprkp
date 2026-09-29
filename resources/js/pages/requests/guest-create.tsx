@@ -7,8 +7,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Boxes, Package, Plus, Trash2, ClipboardList, CheckCircle, Copy, Check, ArrowLeft, ArrowRight, User, Building2, Send } from 'lucide-react';
+import { Boxes, Package, Plus, Trash2, ClipboardList, CheckCircle, Copy, Check, ArrowLeft, ArrowRight, User, Building2, Send, Moon, Sun } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
+import { useAppearance } from '@/hooks/use-appearance';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Spinner } from '@/components/ui/spinner';
 
 type Warehouse = {
     id: number;
@@ -42,11 +52,17 @@ type FormItem = {
 
 export default function GuestRequestCreate({ warehouses, products }: Props) {
     const { flash } = usePage().props as any;
+    const { appearance, updateAppearance } = useAppearance();
 
     const [step, setStep] = useState(1);
     const [selectedProductId, setSelectedProductId] = useState('');
     const [itemQty, setItemQty] = useState(1);
     const [copied, setCopied] = useState(false);
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+
+    const toggleTheme = () => {
+        updateAppearance(appearance === 'dark' ? 'light' : 'dark');
+    };
 
     const { data, setData, post, processing, errors, reset } = useForm({
         requester_name: '',
@@ -190,11 +206,18 @@ export default function GuestRequestCreate({ warehouses, products }: Props) {
             toast.error('Tambahkan minimal 1 barang ke dalam daftar pengajuan.');
             return;
         }
+        setIsConfirmOpen(true);
+    };
 
+    const handleConfirmSubmit = () => {
         post('/pengajuan', {
             onSuccess: () => {
+                setIsConfirmOpen(false);
                 reset();
                 setStep(1);
+            },
+            onError: () => {
+                setIsConfirmOpen(false);
             },
         });
     };
@@ -207,9 +230,27 @@ export default function GuestRequestCreate({ warehouses, products }: Props) {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 flex flex-col justify-between py-12 px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 flex flex-col justify-between py-12 px-4 sm:px-6 lg:px-8 relative">
             <Head title="Pengajuan Barang Dinas" />
             <Toaster position="top-right" richColors />
+
+            {/* Dark / Light Mode Toggle Button */}
+            <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-10">
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={toggleTheme}
+                    className="h-10 w-10 rounded-xl border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 shadow-sm transition-all"
+                    title={appearance === 'dark' ? 'Ganti ke Mode Terang' : 'Ganti ke Mode Gelap'}
+                >
+                    {appearance === 'dark' ? (
+                        <Sun className="h-5 w-5 text-amber-400" />
+                    ) : (
+                        <Moon className="h-5 w-5 text-indigo-600" />
+                    )}
+                </Button>
+            </div>
 
             <div className="max-w-4xl w-full mx-auto space-y-8 flex-1">
                 {/* Header Area */}
@@ -392,6 +433,7 @@ export default function GuestRequestCreate({ warehouses, products }: Props) {
                                                     <SelectContent className="rounded-xl border-slate-200 dark:border-zinc-800">
                                                         <SelectItem value="Kepala satuan sarana dan prasarana">Kepala satuan sarana dan prasarana</SelectItem>
                                                         <SelectItem value="Kepala satuan pelayanan">Kepala satuan pelayanan</SelectItem>
+                                                        <SelectItem value="Kepala Sub Bagian Keuangan">Kepala Sub Bagian Keuangan</SelectItem>
                                                         <SelectItem value="Kepala satuan penertiban">Kepala satuan penertiban</SelectItem>
                                                         <SelectItem value="Kepala Sub Bagian Tata Usaha">Kepala Sub Bagian Tata Usaha</SelectItem>
                                                         <SelectItem value="Pengurus Barang">Pengurus Barang</SelectItem>
@@ -737,6 +779,77 @@ export default function GuestRequestCreate({ warehouses, products }: Props) {
                     </div>
                 )}
             </div>
+
+            {/* Modal Dialog Konfirmasi Pengajuan */}
+            <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+                <DialogContent className="sm:max-w-md bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 p-6 sm:p-7 rounded-2xl shadow-2xl">
+                    <DialogHeader className="items-center text-center space-y-3">
+                        <div className="h-14 w-14 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center ring-8 ring-emerald-50 dark:ring-emerald-950/30">
+                            <Send className="h-6 w-6" />
+                        </div>
+                        <div>
+                            <DialogTitle className="text-xl font-bold text-slate-900 dark:text-zinc-100">
+                                Apakah Anda Yakin?
+                            </DialogTitle>
+                            <DialogDescription className="text-sm text-slate-500 dark:text-zinc-400 mt-1.5">
+                                Pastikan identitas pemohon dan rincian barang yang diajukan sudah sesuai sebelum dikirim.
+                            </DialogDescription>
+                        </div>
+                    </DialogHeader>
+
+                    {/* Ringkasan Singkat Pengajuan */}
+                    <div className="bg-slate-50 dark:bg-zinc-950/70 rounded-xl p-4 border border-slate-200/80 dark:border-zinc-800 space-y-2.5 my-2">
+                        <div className="flex justify-between items-center text-xs">
+                            <span className="text-slate-500 dark:text-zinc-400">Nama Pemohon:</span>
+                            <span className="font-semibold text-slate-800 dark:text-zinc-200">{data.requester_name || '-'}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs">
+                            <span className="text-slate-500 dark:text-zinc-400">Divisi / Unit:</span>
+                            <span className="font-semibold text-slate-800 dark:text-zinc-200">{data.requester_dept || '-'}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs">
+                            <span className="text-slate-500 dark:text-zinc-400">Gudang Sumber:</span>
+                            <span className="font-semibold text-slate-800 dark:text-zinc-200">{getWarehouseName(data.warehouse_id)}</span>
+                        </div>
+                        <div className="pt-2.5 border-t border-slate-200 dark:border-zinc-800/80 flex justify-between items-center text-xs">
+                            <span className="text-slate-500 dark:text-zinc-400">Total Pengajuan:</span>
+                            <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                                {data.items.length} Jenis ({data.items.reduce((sum, item) => sum + item.qty_requested, 0)} Total Unit)
+                            </span>
+                        </div>
+                    </div>
+
+                    <DialogFooter className="grid grid-cols-2 gap-3 sm:gap-3 pt-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setIsConfirmOpen(false)}
+                            disabled={processing}
+                            className="h-11 rounded-xl border-slate-200 dark:border-zinc-800 font-semibold text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 cursor-pointer"
+                        >
+                            Periksa Lagi
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={handleConfirmSubmit}
+                            disabled={processing}
+                            className="h-11 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 shadow-md cursor-pointer"
+                        >
+                            {processing ? (
+                                <>
+                                    <Spinner className="h-4 w-4" />
+                                    <span>Mengirim...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Send className="h-4 w-4" />
+                                    <span>Ya, Kirim Sekarang</span>
+                                </>
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* Footer */}
             <div className="text-center text-xs text-slate-400 dark:text-zinc-600 pt-8 mt-12 border-t border-slate-100 dark:border-zinc-900/50">
