@@ -7,7 +7,28 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Boxes, Package, Plus, Trash2, ClipboardList, CheckCircle, Copy, Check, ArrowLeft, ArrowRight, User, Building2, Send, Moon, Sun } from 'lucide-react';
+import {
+    Boxes,
+    Package,
+    Plus,
+    Minus,
+    Trash2,
+    ClipboardList,
+    CheckCircle,
+    CheckCircle2,
+    Copy,
+    Check,
+    ArrowLeft,
+    ArrowRight,
+    User,
+    Building2,
+    Send,
+    Moon,
+    Sun,
+    Search,
+    X,
+    Layers,
+} from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 import { useAppearance } from '@/hooks/use-appearance';
 import {
@@ -48,6 +69,7 @@ type FormItem = {
     code: string;
     name: string;
     symbol: string;
+    category?: string;
 };
 
 export default function GuestRequestCreate({ warehouses, products }: Props) {
@@ -55,8 +77,7 @@ export default function GuestRequestCreate({ warehouses, products }: Props) {
     const { appearance, updateAppearance } = useAppearance();
 
     const [step, setStep] = useState(1);
-    const [selectedProductId, setSelectedProductId] = useState('');
-    const [itemQty, setItemQty] = useState(1);
+    const [productSearch, setProductSearch] = useState('');
     const [copied, setCopied] = useState(false);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
@@ -93,10 +114,22 @@ export default function GuestRequestCreate({ warehouses, products }: Props) {
         return stock ? stock.qty : 0;
     };
 
-    // Filter products that have stock > 0 in the selected warehouse
-    const filteredProducts = products.filter((p) => {
+    // Products that have stock > 0 in the selected warehouse
+    const availableProducts = products.filter((p) => {
         const stockQty = getProductStock(p, data.warehouse_id);
         return stockQty > 0;
+    });
+
+    // Search filter across available products
+    const filteredProducts = availableProducts.filter((p) => {
+        if (!productSearch.trim()) return true;
+        const q = productSearch.toLowerCase().trim();
+        return (
+            p.name.toLowerCase().includes(q) ||
+            (p.code && p.code.toLowerCase().includes(q)) ||
+            (p.sku && p.sku.toLowerCase().includes(q)) ||
+            (p.category?.name && p.category.name.toLowerCase().includes(q))
+        );
     });
 
     const handleNextStep = () => {
@@ -151,49 +184,78 @@ export default function GuestRequestCreate({ warehouses, products }: Props) {
         setStep(2);
     };
 
-    const handleAddItem = () => {
-        if (!selectedProductId) {
-            toast.error('Silakan pilih barang terlebih dahulu.');
-            return;
-        }
-
-        const product = products.find((p) => String(p.id) === selectedProductId);
-        if (!product) return;
-
+    const handleAddProduct = (product: Product, addQty: number = 1) => {
         const stockQty = getProductStock(product, data.warehouse_id);
-        if (itemQty > stockQty) {
-            toast.error('Kuantitas melebihi stok yang tersedia pada gudang ini.');
+        if (stockQty <= 0) {
+            toast.error(`Stok "${product.name}" di gudang ini kosong.`);
             return;
         }
 
         const exists = data.items.find((item) => item.product_id === product.id);
+        const currentQty = exists ? exists.qty_requested : 0;
+        const newQty = currentQty + addQty;
+
+        if (newQty > stockQty) {
+            toast.error(`Jumlah pengajuan (${newQty}) melebihi sisa stok yang tersedia di gudang (${stockQty} ${product.unit?.symbol || 'pcs'}).`);
+            return;
+        }
+
         if (exists) {
-            const newQty = exists.qty_requested + itemQty;
-            if (newQty > stockQty) {
-                toast.error('Kuantitas total yang diajukan melebihi stok yang tersedia pada gudang ini.');
-                return;
-            }
             setData('items', data.items.map((item) =>
                 item.product_id === product.id
                     ? { ...item, qty_requested: newQty }
                     : item
             ));
-            toast.success(`Jumlah pengajuan "${product.name}" berhasil diupdate.`);
+            toast.success(`Jumlah "${product.name}" diupdate menjadi ${newQty} ${product.unit?.symbol || 'pcs'}.`);
         } else {
             const newItem: FormItem = {
                 product_id: product.id,
-                qty_requested: itemQty,
+                qty_requested: addQty,
                 sku: product.sku,
                 code: product.code,
                 name: product.name,
                 symbol: product.unit?.symbol || 'pcs',
+                category: product.category?.name,
             };
             setData('items', [...data.items, newItem]);
             toast.success(`Barang "${product.name}" ditambahkan ke daftar.`);
         }
+    };
 
-        setSelectedProductId('');
-        setItemQty(1);
+    const handleUpdateItemQty = (productId: number, newQty: number) => {
+        const product = products.find((p) => p.id === productId);
+        if (!product) return;
+
+        const stockQty = getProductStock(product, data.warehouse_id);
+
+        if (newQty > stockQty) {
+            toast.error(`Jumlah pengajuan tidak boleh melebihi sisa stok (${stockQty} ${product.unit?.symbol || 'pcs'}).`);
+            setData('items', data.items.map((item) =>
+                item.product_id === productId
+                    ? { ...item, qty_requested: stockQty }
+                    : item
+            ));
+            return;
+        }
+
+        if (newQty < 1) {
+            handleRemoveItemByProductId(productId);
+            return;
+        }
+
+        setData('items', data.items.map((item) =>
+            item.product_id === productId
+                ? { ...item, qty_requested: newQty }
+                : item
+        ));
+    };
+
+    const handleRemoveItemByProductId = (productId: number) => {
+        const item = data.items.find((i) => i.product_id === productId);
+        setData('items', data.items.filter((i) => i.product_id !== productId));
+        if (item) {
+            toast.info(`"${item.name}" dihapus dari daftar pengajuan.`);
+        }
     };
 
     const handleRemoveItem = (idx: number) => {
@@ -650,100 +712,279 @@ export default function GuestRequestCreate({ warehouses, products }: Props) {
                                 <form onSubmit={handleSubmit} className="space-y-6">
                                     <Card className="bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800 shadow-lg rounded-2xl overflow-hidden">
                                         <CardHeader className="bg-slate-50/50 dark:bg-zinc-900/50 border-b border-slate-100 dark:border-zinc-800 py-5 px-6">
-                                            <CardTitle className="text-lg font-bold flex items-center gap-2">
-                                                <Package className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-                                                <span>Langkah 2: Pilih Barang & Kuantitas</span>
-                                            </CardTitle>
-                                            <CardDescription>Cari nama barang yang Anda butuhkan dan masukkan jumlahnya.</CardDescription>
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                                <div>
+                                                    <CardTitle className="text-lg font-bold flex items-center gap-2">
+                                                        <Package className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                                                        <span>Langkah 2: Pilih Barang & Kuantitas</span>
+                                                    </CardTitle>
+                                                    <CardDescription>Cari barang yang tersedia di gudang terpilih, masukkan ke daftar dan tentukan jumlahnya.</CardDescription>
+                                                </div>
+                                                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/60 self-start sm:self-auto">
+                                                    <Boxes className="h-3.5 w-3.5" />
+                                                    <span>{availableProducts.length} Barang Tersedia di Gudang</span>
+                                                </div>
+                                            </div>
                                         </CardHeader>
                                         <CardContent className="p-6 space-y-6">
-                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
-                                                <div className="sm:col-span-2 space-y-2">
-                                                    <Label htmlFor="product_select" className="text-slate-700 dark:text-zinc-300 font-semibold text-xs">Pilih Produk</Label>
-                                                    <Select
-                                                        value={selectedProductId}
-                                                        onValueChange={setSelectedProductId}
-                                                    >
-                                                        <SelectTrigger className="rounded-xl h-11 border-slate-200 dark:border-zinc-800 focus:ring-indigo-500">
-                                                            <SelectValue placeholder="Cari / Pilih Nama Barang" />
-                                                        </SelectTrigger>
-                                                        <SelectContent className="rounded-xl border-slate-200 dark:border-zinc-800 max-h-72">
-                                                            {filteredProducts.map((p) => (
-                                                                <SelectItem key={p.id} value={String(p.id)}>
-                                                                    {p.name}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
+                                            {/* Kotak Pencarian & Pilihan Barang (Bukan Dropdown) */}
+                                            <div className="space-y-3">
+                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
+                                                    <Label className="text-slate-700 dark:text-zinc-300 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                                                        <Search className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+                                                        <span>Cari & Pilih Barang di Gudang</span>
+                                                    </Label>
+                                                    <span className="text-slate-500 dark:text-zinc-400">
+                                                        Menampilkan <strong className="text-slate-800 dark:text-zinc-200">{filteredProducts.length}</strong> dari <strong>{availableProducts.length}</strong> barang
+                                                    </span>
                                                 </div>
 
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="qty_input" className="text-slate-700 dark:text-zinc-300 font-semibold text-xs">Kuantitas</Label>
-                                                    <div className="flex gap-2">
-                                                        <Input
-                                                            id="qty_input"
-                                                            type="number"
-                                                            min={1}
-                                                            value={itemQty}
-                                                            onChange={(e) => setItemQty(parseInt(e.target.value) || 1)}
-                                                            disabled={!selectedProductId}
-                                                            className="rounded-xl h-11 border-slate-200 dark:border-zinc-800 focus-visible:ring-indigo-500 font-mono text-center font-bold"
-                                                        />
-                                                        <Button
+                                                <div className="relative">
+                                                    <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400 dark:text-zinc-500 pointer-events-none" />
+                                                    <Input
+                                                        type="text"
+                                                        placeholder="Ketik nama barang, kode, SKU, atau kategori..."
+                                                        value={productSearch}
+                                                        onChange={(e) => setProductSearch(e.target.value)}
+                                                        className="pl-10 pr-9 h-11 rounded-xl border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/60 focus-visible:ring-indigo-500 font-medium"
+                                                    />
+                                                    {productSearch && (
+                                                        <button
                                                             type="button"
-                                                            onClick={handleAddItem}
-                                                            disabled={!selectedProductId}
-                                                            className="h-11 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4"
-                                                            title="Tambah ke Keranjang"
+                                                            onClick={() => setProductSearch('')}
+                                                            className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 p-0.5 rounded-full hover:bg-slate-200 dark:hover:bg-zinc-800"
+                                                            title="Hapus pencarian"
                                                         >
-                                                            <Plus className="h-5 w-5" />
-                                                        </Button>
-                                                    </div>
+                                                            <X className="h-4 w-4" />
+                                                        </button>
+                                                    )}
+                                                </div>
+
+                                                {/* Kotak Daftar Barang Scrollable */}
+                                                <div className="border border-slate-200 dark:border-zinc-800 rounded-2xl max-h-[310px] overflow-y-auto divide-y divide-slate-100 dark:divide-zinc-800/80 bg-white dark:bg-zinc-950 shadow-inner">
+                                                    {availableProducts.length === 0 ? (
+                                                        <div className="p-8 text-center text-sm text-slate-500 dark:text-zinc-400 space-y-1">
+                                                            <Boxes className="mx-auto h-8 w-8 text-slate-300 dark:text-zinc-700" />
+                                                            <p className="font-semibold">Tidak ada barang yang memiliki stok di gudang ini.</p>
+                                                            <p className="text-xs text-slate-400">Silakan kembali ke langkah 1 untuk memilih gudang lain.</p>
+                                                        </div>
+                                                    ) : filteredProducts.length === 0 ? (
+                                                        <div className="p-8 text-center text-sm text-slate-500 dark:text-zinc-400 space-y-2">
+                                                            <Search className="mx-auto h-7 w-7 text-slate-300 dark:text-zinc-700" />
+                                                            <p className="font-medium">Tidak ada barang yang cocok dengan &quot;{productSearch}&quot;</p>
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => setProductSearch('')}
+                                                                className="h-8 rounded-lg text-xs"
+                                                            >
+                                                                Tampilkan Semua Barang
+                                                            </Button>
+                                                        </div>
+                                                    ) : (
+                                                        filteredProducts.map((product) => {
+                                                            const stockQty = getProductStock(product, data.warehouse_id);
+                                                            const itemInCart = data.items.find((i) => i.product_id === product.id);
+                                                            const isMaxReached = itemInCart && itemInCart.qty_requested >= stockQty;
+
+                                                            return (
+                                                                <div
+                                                                    key={product.id}
+                                                                    className={`p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors ${
+                                                                        itemInCart
+                                                                            ? 'bg-indigo-50/50 dark:bg-indigo-950/20'
+                                                                            : 'hover:bg-slate-50/80 dark:hover:bg-zinc-900/60'
+                                                                    }`}
+                                                                >
+                                                                    <div className="space-y-1 min-w-0">
+                                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                                            <span className="font-bold text-sm text-slate-900 dark:text-zinc-100">
+                                                                                {product.name}
+                                                                            </span>
+                                                                            {product.category?.name && (
+                                                                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400">
+                                                                                    {product.category.name}
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="flex items-center gap-3 text-xs flex-wrap font-mono">
+                                                                            {product.code && (
+                                                                                <span className="text-slate-400 text-[11px]">
+                                                                                    Kode: {product.code}
+                                                                                </span>
+                                                                            )}
+                                                                            {product.sku && (
+                                                                                <span className="text-slate-400 text-[11px]">
+                                                                                    SKU: {product.sku}
+                                                                                </span>
+                                                                            )}
+                                                                            {/* Badge Sisa Stok Barang di Gudang */}
+                                                                            <span
+                                                                                className={`inline-flex items-center gap-1 font-bold px-2 py-0.5 rounded-md text-xs border ${
+                                                                                    stockQty > 10
+                                                                                        ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/60'
+                                                                                        : 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800/60'
+                                                                                }`}
+                                                                            >
+                                                                                <Boxes className="h-3 w-3" />
+                                                                                <span>
+                                                                                    Sisa Stok: {stockQty} {product.unit?.symbol || 'pcs'}
+                                                                                </span>
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                                                                        {itemInCart ? (
+                                                                            <div className="flex items-center gap-2">
+                                                                                <span className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-100/70 dark:bg-indigo-950/60 px-2.5 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800/50 flex items-center gap-1">
+                                                                                    <Check className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+                                                                                    <span>{itemInCart.qty_requested} {product.unit?.symbol || 'pcs'} di Daftar</span>
+                                                                                </span>
+                                                                                <Button
+                                                                                    type="button"
+                                                                                    size="sm"
+                                                                                    variant="outline"
+                                                                                    disabled={isMaxReached}
+                                                                                    onClick={() => handleAddProduct(product, 1)}
+                                                                                    className="h-8 rounded-lg text-xs font-bold gap-1 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 cursor-pointer"
+                                                                                    title={isMaxReached ? 'Maksimal stok tercapai' : 'Tambah 1 unit lagi'}
+                                                                                >
+                                                                                    <Plus className="h-3.5 w-3.5" />
+                                                                                    <span>Tambah Lagi</span>
+                                                                                </Button>
+                                                                            </div>
+                                                                        ) : (
+                                                                            <Button
+                                                                                type="button"
+                                                                                size="sm"
+                                                                                onClick={() => handleAddProduct(product, 1)}
+                                                                                className="h-8 rounded-lg text-xs font-bold gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs cursor-pointer"
+                                                                            >
+                                                                                <Plus className="h-3.5 w-3.5" />
+                                                                                <span>+ Tambah</span>
+                                                                            </Button>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })
+                                                    )}
                                                 </div>
                                             </div>
 
-                                            {/* Table Cart */}
-                                            <div className="space-y-2">
-                                                <Label className="text-slate-700 dark:text-zinc-300 font-semibold text-xs uppercase tracking-wider">Daftar Pilihan Anda</Label>
+                                            {/* Table Cart: Daftar Pilihan Barang */}
+                                            <div className="space-y-3 pt-2">
+                                                <div className="flex items-center justify-between">
+                                                    <Label className="text-slate-700 dark:text-zinc-300 font-bold text-xs uppercase tracking-wider flex items-center gap-1.5">
+                                                        <ClipboardList className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                                                        <span>Daftar Barang yang Diajukan</span>
+                                                    </Label>
+                                                    {data.items.length > 0 && (
+                                                        <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400">
+                                                            {data.items.length} Jenis ({data.items.reduce((sum, item) => sum + item.qty_requested, 0)} Total Unit)
+                                                        </span>
+                                                    )}
+                                                </div>
+
                                                 {data.items.length > 0 ? (
-                                                    <div className="rounded-xl border overflow-hidden border-slate-200 dark:border-zinc-800 shadow-sm">
+                                                    <div className="rounded-2xl border overflow-hidden border-slate-200 dark:border-zinc-800 shadow-sm bg-white dark:bg-zinc-950">
                                                         <Table>
-                                                            <TableHeader className="bg-slate-50 dark:bg-zinc-900/50">
-                                                                <TableRow>
-                                                                    <TableHead>Nama Barang</TableHead>
-                                                                    <TableHead className="text-right w-[140px]">Jumlah Pengajuan</TableHead>
-                                                                    <TableHead className="w-[60px]"></TableHead>
+                                                            <TableHeader className="bg-slate-50 dark:bg-zinc-900/80">
+                                                                <TableRow className="border-b border-slate-200 dark:border-zinc-800">
+                                                                    <TableHead className="font-bold text-slate-700 dark:text-zinc-300">Nama Barang</TableHead>
+                                                                    <TableHead className="text-center w-[140px] font-bold text-slate-700 dark:text-zinc-300">Sisa Stok Gudang</TableHead>
+                                                                    <TableHead className="text-right w-[180px] font-bold text-slate-700 dark:text-zinc-300">Jumlah Diajukan</TableHead>
+                                                                    <TableHead className="w-[50px]"></TableHead>
                                                                 </TableRow>
                                                             </TableHeader>
                                                             <TableBody>
-                                                                {data.items.map((item, idx) => (
-                                                                    <TableRow key={idx} className="hover:bg-slate-50/50 dark:hover:bg-zinc-900/50 border-b border-slate-100 dark:border-zinc-800/80">
-                                                                        <TableCell className="font-semibold text-slate-800 dark:text-zinc-200">{item.name}</TableCell>
-                                                                        <TableCell className="text-right font-mono font-bold text-indigo-600 dark:text-indigo-400">
-                                                                            {item.qty_requested} {item.symbol}
-                                                                        </TableCell>
-                                                                        <TableCell className="text-center">
-                                                                            <Button
-                                                                                type="button"
-                                                                                variant="ghost"
-                                                                                size="icon"
-                                                                                className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-lg"
-                                                                                onClick={() => handleRemoveItem(idx)}
-                                                                            >
-                                                                                <Trash2 className="h-4 w-4" />
-                                                                            </Button>
-                                                                        </TableCell>
-                                                                    </TableRow>
-                                                                ))}
+                                                                {data.items.map((item, idx) => {
+                                                                    const product = products.find((p) => p.id === item.product_id);
+                                                                    const stockQty = product ? getProductStock(product, data.warehouse_id) : 0;
+                                                                    const isMaxReached = item.qty_requested >= stockQty;
+
+                                                                    return (
+                                                                        <TableRow key={idx} className="hover:bg-slate-50/50 dark:hover:bg-zinc-900/50 border-b border-slate-100 dark:border-zinc-800/80">
+                                                                            <TableCell>
+                                                                                <div className="font-semibold text-slate-800 dark:text-zinc-200 text-sm">
+                                                                                    {item.name}
+                                                                                </div>
+                                                                                <div className="text-[11px] text-slate-400 font-mono">
+                                                                                    {item.sku || item.code ? `SKU: ${item.sku || item.code}` : ''}
+                                                                                </div>
+                                                                            </TableCell>
+                                                                            <TableCell className="text-center font-mono">
+                                                                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300">
+                                                                                    {stockQty} {item.symbol}
+                                                                                </span>
+                                                                            </TableCell>
+                                                                            <TableCell className="text-right">
+                                                                                <div className="flex items-center justify-end gap-1.5">
+                                                                                    <Button
+                                                                                        type="button"
+                                                                                        variant="outline"
+                                                                                        size="icon"
+                                                                                        className="h-8 w-8 rounded-lg border-slate-200 dark:border-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-800 cursor-pointer"
+                                                                                        onClick={() => handleUpdateItemQty(item.product_id, item.qty_requested - 1)}
+                                                                                        title="Kurangi 1 unit"
+                                                                                    >
+                                                                                        <Minus className="h-3.5 w-3.5" />
+                                                                                    </Button>
+                                                                                    <Input
+                                                                                        type="number"
+                                                                                        min={1}
+                                                                                        max={stockQty}
+                                                                                        value={item.qty_requested}
+                                                                                        onChange={(e) => handleUpdateItemQty(item.product_id, parseInt(e.target.value) || 1)}
+                                                                                        className="h-8 w-16 text-center font-mono font-bold text-xs p-1 rounded-lg border-slate-200 dark:border-zinc-800 text-indigo-600 dark:text-indigo-400"
+                                                                                    />
+                                                                                    <Button
+                                                                                        type="button"
+                                                                                        variant="outline"
+                                                                                        size="icon"
+                                                                                        disabled={isMaxReached}
+                                                                                        className="h-8 w-8 rounded-lg border-slate-200 dark:border-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-800 cursor-pointer"
+                                                                                        onClick={() => handleUpdateItemQty(item.product_id, item.qty_requested + 1)}
+                                                                                        title={isMaxReached ? 'Maksimal stok tercapai' : 'Tambah 1 unit'}
+                                                                                    >
+                                                                                        <Plus className="h-3.5 w-3.5" />
+                                                                                    </Button>
+                                                                                    <span className="text-xs font-medium text-slate-500 dark:text-zinc-400 w-8 text-left pl-1">
+                                                                                        {item.symbol}
+                                                                                    </span>
+                                                                                </div>
+                                                                                {isMaxReached && (
+                                                                                    <div className="text-[10px] text-amber-600 dark:text-amber-400 font-medium mt-0.5 text-right">
+                                                                                        Maks. stok tercapai
+                                                                                    </div>
+                                                                                )}
+                                                                            </TableCell>
+                                                                            <TableCell className="text-center">
+                                                                                <Button
+                                                                                    type="button"
+                                                                                    variant="ghost"
+                                                                                    size="icon"
+                                                                                    className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-lg cursor-pointer"
+                                                                                    onClick={() => handleRemoveItem(idx)}
+                                                                                    title="Hapus barang ini"
+                                                                                >
+                                                                                    <Trash2 className="h-4 w-4" />
+                                                                                </Button>
+                                                                            </TableCell>
+                                                                        </TableRow>
+                                                                    );
+                                                                })}
                                                             </TableBody>
                                                         </Table>
                                                     </div>
                                                 ) : (
-                                                    <div className="text-center py-12 border-2 border-dashed border-slate-200 dark:border-zinc-800 rounded-2xl space-y-2">
-                                                        <Boxes className="mx-auto h-12 w-12 text-slate-300 dark:text-zinc-700" />
-                                                        <p className="text-sm font-semibold text-slate-500 dark:text-zinc-400">Keranjang masih kosong</p>
-                                                        <p className="text-xs text-slate-400 max-w-[280px] mx-auto">
-                                                            Pilih nama produk di atas, tentukan jumlah yang diperlukan, lalu tekan tombol tambah (+).
+                                                    <div className="text-center py-10 border-2 border-dashed border-slate-200 dark:border-zinc-800 rounded-2xl space-y-2 bg-slate-50/50 dark:bg-zinc-950/30">
+                                                        <Boxes className="mx-auto h-10 w-10 text-slate-300 dark:text-zinc-700" />
+                                                        <p className="text-sm font-semibold text-slate-600 dark:text-zinc-400">Belum ada barang di daftar pengajuan</p>
+                                                        <p className="text-xs text-slate-400 max-w-[320px] mx-auto">
+                                                            Cari barang pada kotak di atas lalu tekan tombol <strong>+ Tambah</strong> untuk memasukkannya ke daftar permohonan.
                                                         </p>
                                                     </div>
                                                 )}
