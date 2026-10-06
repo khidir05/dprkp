@@ -118,7 +118,7 @@ class InboundController extends Controller
         $validated = $request->validate([
             'supplier_id' => 'required|exists:suppliers,id',
             'warehouse_id' => 'required|exists:warehouses,id',
-            'transaction_number' => 'required|string|max:100|unique:inbound_transactions,transaction_number',
+            'transaction_number' => 'required|string|max:100',
             'reference_document' => 'nullable|string|max:100',
             'transaction_date' => 'required|date',
             'notes' => 'nullable|string',
@@ -132,7 +132,6 @@ class InboundController extends Controller
             'items.*.brand' => 'nullable|string|max:255',
             'items.*.packaging' => 'nullable|string|max:255',
         ], [
-            'transaction_number.unique' => 'Nomor transaksi sudah digunakan.',
             'items.required' => 'Minimal harus ada 1 barang yang dimasukkan.',
             'items.*.qty.min' => 'Jumlah barang minimal 1.',
         ]);
@@ -147,11 +146,25 @@ class InboundController extends Controller
         }
 
         DB::transaction(function() use ($validated, $user) {
+            // Check & auto-resolve collision on transaction_number
+            $trxNumber = $validated['transaction_number'];
+            if (InboundTransaction::where('transaction_number', $trxNumber)->exists()) {
+                $count = InboundTransaction::whereDate('created_at', today())->count() + 1;
+                do {
+                    $candidate = 'INB-' . date('Ymd') . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+                    if (!InboundTransaction::where('transaction_number', $candidate)->exists()) {
+                        $trxNumber = $candidate;
+                        break;
+                    }
+                    $count++;
+                } while (true);
+            }
+
             // 1. Create InboundTransaction
             $transaction = InboundTransaction::create([
                 'supplier_id' => $validated['supplier_id'],
                 'warehouse_id' => $validated['warehouse_id'],
-                'transaction_number' => $validated['transaction_number'],
+                'transaction_number' => $trxNumber,
                 'reference_document' => $validated['reference_document'] ?? null,
                 'transaction_date' => $validated['transaction_date'],
                 'notes' => $validated['notes'] ?? null,
@@ -164,10 +177,10 @@ class InboundController extends Controller
                 $productId = $item['product_id'];
 
                 if ($productId === 0) {
-                    // Create new product on-the-fly
-                    $rand = rand(1000, 9999);
-                    $sku = 'SKU-' . substr(time(), -6) . '-' . $rand;
-                    $code = 'PRD-' . substr(time(), -6) . '-' . $rand;
+                    // Create new product on-the-fly with collision-safe SKU and Code
+                    $randCode = strtoupper(Str::random(4));
+                    $sku = 'SKU-' . date('ymdHis') . '-' . $randCode;
+                    $code = 'PRD-' . date('ymdHis') . '-' . $randCode;
 
                     $product = \App\Models\Product::create([
                         'category_id' => $item['category_id'],
@@ -192,20 +205,17 @@ class InboundController extends Controller
                     'created_at' => now(),
                 ]);
 
-                // 3. Increment stock
-                $stock = Stock::where('warehouse_id', $validated['warehouse_id'])
-                    ->where('product_id', $productId)
-                    ->first();
-
-                if ($stock) {
-                    $stock->increment('qty', $item['qty']);
-                } else {
-                    Stock::create([
+                // 3. Increment stock atomically
+                $stock = Stock::firstOrCreate(
+                    [
                         'warehouse_id' => $validated['warehouse_id'],
                         'product_id' => $productId,
-                        'qty' => $item['qty'],
-                    ]);
-                }
+                    ],
+                    [
+                        'qty' => 0,
+                    ]
+                );
+                $stock->increment('qty', $item['qty']);
             }
         });
 

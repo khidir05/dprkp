@@ -340,6 +340,29 @@ class AppServiceProvider extends ServiceProvider
                 }
             }
         });
+
+        // Low Stock Notification Hook
+        \App\Models\Stock::saved(function ($stock) use ($notify, $notifyManagers) {
+            $product = $stock->product;
+            if ($product && $stock->qty <= $product->minimum_stock) {
+                $whName = $stock->warehouse?->name ?? 'Gudang';
+                $unit = $product->unit?->symbol ?? 'unit';
+                $title = "Peringatan Stok Menipis";
+                $msg = "Stok barang '{$product->name}' di {$whName} tersisa {$stock->qty} {$unit} (Batas minimum: {$product->minimum_stock} {$unit}).";
+
+                // Notify Managers & Super Admins
+                $notifyManagers($title, $msg, 'warning', 'stocks', $stock->id);
+
+                // Notify Assigned Warehouse Admins
+                if ($stock->warehouse) {
+                    foreach ($stock->warehouse->users as $admin) {
+                        if ($admin->roleModel?->code === 'admin_gudang') {
+                            $notify($admin->id, $title, $msg, 'warning', 'stocks', $stock->id);
+                        }
+                    }
+                }
+            }
+        });
     }
 
     /**

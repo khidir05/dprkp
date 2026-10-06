@@ -46,6 +46,29 @@ class StockController extends Controller
             $query->where('warehouse_id', $request->input('warehouse_id'));
         }
 
+        if ($request->filled('status') && $request->input('status') !== 'all') {
+            $status = $request->input('status');
+            if ($status === 'low_stock') {
+                $query->whereHas('product', function($pq) {
+                    $pq->whereColumn('stocks.qty', '<=', 'products.minimum_stock');
+                });
+            } elseif ($status === 'safe') {
+                $query->whereHas('product', function($pq) {
+                    $pq->whereColumn('stocks.qty', '>', 'products.minimum_stock');
+                });
+            }
+        }
+
+        // Calculate count of low stock items for current user's warehouses
+        $lowStockCountQuery = Stock::query();
+        if ($user->roleModel->code === 'admin_gudang') {
+            $assignedWarehouseIds = $user->warehouses()->pluck('warehouses.id');
+            $lowStockCountQuery->whereIn('warehouse_id', $assignedWarehouseIds);
+        }
+        $lowStockCount = $lowStockCountQuery->whereHas('product', function($pq) {
+            $pq->whereColumn('stocks.qty', '<=', 'products.minimum_stock');
+        })->count();
+
         $stocks = $query->orderBy('qty', 'desc')
             ->paginate(15)
             ->withQueryString();
@@ -60,7 +83,8 @@ class StockController extends Controller
         return Inertia::render('stocks/index', [
             'stocks' => $stocks,
             'warehouses' => $warehouses,
-            'filters' => $request->only(['search', 'warehouse_id']),
+            'filters' => $request->only(['search', 'warehouse_id', 'status']),
+            'lowStockCount' => $lowStockCount,
             'role' => $user->roleModel->code,
         ]);
     }

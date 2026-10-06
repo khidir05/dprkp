@@ -112,11 +112,6 @@ export function AppSidebar() {
     if (['super_admin', 'manager', 'admin_gudang'].includes(userRole)) {
         laporanItems.push(
             {
-                title: 'Alert Stok',
-                href: '/alerts',
-                icon: ShieldAlert,
-            },
-            {
                 title: 'Laporan',
                 href: '/reports',
                 icon: FileText,

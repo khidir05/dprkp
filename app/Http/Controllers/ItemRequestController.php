@@ -109,9 +109,16 @@ class ItemRequestController extends Controller
         ]);
 
         DB::transaction(function() use ($validated, $user) {
-            // Auto generate request number
+            // Auto generate request number safely
             $count = ItemRequest::whereDate('created_at', today())->count() + 1;
-            $requestNumber = 'REQ-' . date('Ymd') . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+            do {
+                $candidate = 'REQ-' . date('Ymd') . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+                if (!ItemRequest::where('request_number', $candidate)->exists()) {
+                    $requestNumber = $candidate;
+                    break;
+                }
+                $count++;
+            } while (true);
 
             $itemRequest = ItemRequest::create([
                 'request_number' => $requestNumber,
@@ -551,9 +558,16 @@ class ItemRequestController extends Controller
 
         $requestNumber = '';
         DB::transaction(function() use ($validated, &$requestNumber) {
-            // Auto generate request number
+            // Auto generate request number safely
             $count = ItemRequest::whereDate('created_at', today())->count() + 1;
-            $requestNumber = 'REQ-' . date('Ymd') . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+            do {
+                $candidate = 'REQ-' . date('Ymd') . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+                if (!ItemRequest::where('request_number', $candidate)->exists()) {
+                    $requestNumber = $candidate;
+                    break;
+                }
+                $count++;
+            } while (true);
 
             $itemRequest = ItemRequest::create([
                 'request_number' => $requestNumber,

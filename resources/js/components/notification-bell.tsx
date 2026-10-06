@@ -118,6 +118,28 @@ export default function NotificationBell() {
         }
     };
 
+    const deleteAllNotifications = async () => {
+        if (!confirm('Apakah Anda yakin ingin menghapus semua notifikasi?')) {
+            return;
+        }
+        try {
+            const response = await fetch('/notifications/delete-all', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || ''
+                }
+            });
+            if (response.ok) {
+                setNotifications([]);
+                setUnreadCount(0);
+            }
+        } catch (error) {
+            console.error('Gagal menghapus semua notifikasi:', error);
+        }
+    };
+
     const handleNotificationClick = (notification: NotificationType) => {
         // If unread, mark as read first
         if (!notification.is_read) {
@@ -142,8 +164,10 @@ export default function NotificationBell() {
             router.visit(`/mutations/${notification.ref_id}`);
         } else if (notification.ref_table === 'stock_opnames') {
             router.visit(`/stock-opnames/${notification.ref_id}`);
+        } else if (notification.ref_table === 'stocks') {
+            router.visit('/stocks?status=low_stock');
         } else if (notification.ref_table === 'stock_alerts') {
-            router.visit('/alerts');
+            router.visit('/stocks?status=low_stock');
         } else if (notification.ref_table === 'restock_lists') {
             router.visit('/restock');
         } else if (notification.ref_table === 'unavailable_items') {
@@ -174,15 +198,28 @@ export default function NotificationBell() {
             <DropdownMenuContent className="w-80 sm:w-96" align="end">
                 <div className="flex items-center justify-between p-3 font-semibold text-sm">
                     <span className="text-slate-900 dark:text-slate-100">Notifikasi</span>
-                    {unreadCount > 0 && (
-                        <button 
-                            onClick={markAllAsRead} 
-                            className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-0.5"
-                        >
-                            <Check className="h-3.5 w-3.5" />
-                            <span>Tandai dibaca</span>
-                        </button>
-                    )}
+                    <div className="flex items-center gap-3">
+                        {unreadCount > 0 && (
+                            <button 
+                                onClick={markAllAsRead} 
+                                className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-0.5 cursor-pointer"
+                                title="Tandai semua notifikasi telah dibaca"
+                            >
+                                <Check className="h-3.5 w-3.5" />
+                                <span>Tandai dibaca</span>
+                            </button>
+                        )}
+                        {notifications.length > 0 && (
+                            <button 
+                                onClick={deleteAllNotifications} 
+                                className="text-xs text-rose-600 dark:text-rose-400 hover:underline flex items-center gap-0.5 cursor-pointer"
+                                title="Hapus semua notifikasi"
+                            >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                <span>Hapus Semua</span>
+                            </button>
+                        )}
+                    </div>
                 </div>
                 <DropdownMenuSeparator />
                 <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-zinc-800">

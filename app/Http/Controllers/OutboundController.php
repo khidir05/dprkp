@@ -69,9 +69,16 @@ class OutboundController extends Controller
 
         // 2. Perform Outbound inside Transaction
         DB::transaction(function() use ($itemRequest, $user, $request) {
-            // Generate outbound transaction number
+            // Generate outbound transaction number safely
             $count = OutboundTransaction::whereDate('created_at', today())->count() + 1;
-            $transactionNumber = 'OUT-' . date('Ymd') . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+            do {
+                $candidate = 'OUT-' . date('Ymd') . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+                if (!OutboundTransaction::where('transaction_number', $candidate)->exists()) {
+                    $transactionNumber = $candidate;
+                    break;
+                }
+                $count++;
+            } while (true);
 
             $outbound = OutboundTransaction::create([
                 'request_id' => $itemRequest->id,

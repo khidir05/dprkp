@@ -90,4 +90,20 @@ class NotificationController extends Controller
 
         return redirect()->back()->with('success', 'Notifikasi berhasil dihapus.');
     }
+
+    /**
+     * Delete all notifications for the current user.
+     */
+    public function destroyAll(Request $request): RedirectResponse|JsonResponse
+    {
+        $user = $request->user();
+
+        Notification::where('user_id', $user->id)->delete();
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true]);
+        }
+
+        return redirect()->back()->with('success', 'Semua notifikasi berhasil dihapus.');
+    }
 }

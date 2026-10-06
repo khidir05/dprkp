@@ -150,10 +150,17 @@ class StockOpnameController extends Controller
         }
 
         DB::transaction(function() use ($validated, $user) {
-            // Generate opname number: OPN-YYYYMMDD-XXXX
+            // Generate opname number safely: OPN-YYYYMMDD-XXXX
             $datePrefix = date('Ymd');
             $count = StockOpname::whereDate('created_at', today())->count() + 1;
-            $opnameNumber = 'OPN-' . $datePrefix . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+            do {
+                $candidate = 'OPN-' . $datePrefix . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+                if (!StockOpname::where('opname_number', $candidate)->exists()) {
+                    $opnameNumber = $candidate;
+                    break;
+                }
+                $count++;
+            } while (true);
 
             $opname = StockOpname::create([
                 'opname_number' => $opnameNumber,

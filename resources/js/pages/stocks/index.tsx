@@ -18,13 +18,16 @@ type Props = {
     filters: {
         search?: string;
         warehouse_id?: string;
+        status?: string;
     };
+    lowStockCount?: number;
     role: string;
 };
 
-export default function StocksIndex({ stocks, warehouses, filters, role }: Props) {
+export default function StocksIndex({ stocks, warehouses, filters, lowStockCount = 0, role }: Props) {
     const [search, setSearch] = useState(filters.search || '');
     const [selectedWarehouseId, setSelectedWarehouseId] = useState(filters.warehouse_id || 'all');
+    const [selectedStatus, setSelectedStatus] = useState(filters.status || 'all');
 
     useEffect(() => {
         setSearch(filters.search || '');
@@ -34,20 +37,30 @@ export default function StocksIndex({ stocks, warehouses, filters, role }: Props
         setSelectedWarehouseId(filters.warehouse_id || 'all');
     }, [filters.warehouse_id]);
 
+    useEffect(() => {
+        setSelectedStatus(filters.status || 'all');
+    }, [filters.status]);
+
     const handleSearchChange = (val: string) => {
         setSearch(val);
-        reloadPage(val, selectedWarehouseId);
+        reloadPage(val, selectedWarehouseId, selectedStatus);
     };
 
     const handleWarehouseFilterChange = (val: string) => {
         setSelectedWarehouseId(val);
-        reloadPage(search, val);
+        reloadPage(search, val, selectedStatus);
     };
 
-    const reloadPage = (searchVal: string, whVal: string) => {
+    const handleStatusFilterChange = (val: string) => {
+        setSelectedStatus(val);
+        reloadPage(search, selectedWarehouseId, val);
+    };
+
+    const reloadPage = (searchVal: string, whVal: string, statusVal: string) => {
         const params: any = {};
         if (searchVal) params.search = searchVal;
         if (whVal && whVal !== 'all') params.warehouse_id = whVal;
+        if (statusVal && statusVal !== 'all') params.status = statusVal;
 
         router.get('/stocks', params, {
             preserveState: true,
@@ -151,6 +164,27 @@ export default function StocksIndex({ stocks, warehouses, filters, role }: Props
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3 print-hidden-button">
+                        {/* Filter Status Stok */}
+                        {!isPemohon && (
+                            <div className="w-44">
+                                <Label htmlFor="filter-status" className="sr-only">Filter Status</Label>
+                                <Select value={selectedStatus} onValueChange={handleStatusFilterChange}>
+                                    <SelectTrigger className="h-9">
+                                        <SelectValue placeholder="Semua Status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Semua Status</SelectItem>
+                                        <SelectItem value="low_stock">
+                                            ⚠️ Stok Menipis {lowStockCount > 0 ? `(${lowStockCount})` : ''}
+                                        </SelectItem>
+                                        <SelectItem value="safe">
+                                            ✅ Stok Aman
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+
                         {role !== 'admin_gudang' && (
                             <div className="w-44">
                                 <Label htmlFor="filter-warehouse" className="sr-only">Filter Gudang</Label>

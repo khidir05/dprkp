@@ -136,9 +136,16 @@ class StockMutationController extends Controller
         }
 
         DB::transaction(function() use ($validated, $user) {
-            // 1. Generate mutation number
+            // 1. Generate mutation number safely
             $count = StockMutation::whereDate('created_at', today())->count() + 1;
-            $mutationNumber = 'MUT-' . date('Ymd') . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+            do {
+                $candidate = 'MUT-' . date('Ymd') . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+                if (!StockMutation::where('mutation_number', $candidate)->exists()) {
+                    $mutationNumber = $candidate;
+                    break;
+                }
+                $count++;
+            } while (true);
 
             // 2. Create mutation record (pending status)
             StockMutation::create([
@@ -159,20 +166,17 @@ class StockMutationController extends Controller
                 ->where('product_id', $validated['product_id'])
                 ->decrement('qty', $validated['qty']);
 
-            // 4. Add stock to destination warehouse
-            $destStock = Stock::where('warehouse_id', $validated['to_warehouse_id'])
-                ->where('product_id', $validated['product_id'])
-                ->first();
-
-            if ($destStock) {
-                $destStock->increment('qty', $validated['qty']);
-            } else {
-                Stock::create([
+            // 4. Add stock to destination warehouse atomically
+            $destStock = Stock::firstOrCreate(
+                [
                     'warehouse_id' => $validated['to_warehouse_id'],
                     'product_id' => $validated['product_id'],
-                    'qty' => $validated['qty'],
-                ]);
-            }
+                ],
+                [
+                    'qty' => 0,
+                ]
+            );
+            $destStock->increment('qty', $validated['qty']);
         });
 
         return redirect()->route('mutations.index')
