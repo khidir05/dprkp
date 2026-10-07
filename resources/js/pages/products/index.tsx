@@ -78,7 +78,20 @@ export default function ProductsIndex({ products, categories, units, warehouses 
     const [isSubmittingImport, setIsSubmittingImport] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
+    const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm<{
+        category_id: string;
+        unit_id: string;
+        warehouse_id: string;
+        sku: string;
+        code: string;
+        name: string;
+        brand: string;
+        packaging: string;
+        description: string;
+        minimum_stock: number;
+        initial_stock: number;
+        warehouse_stocks: Record<number, number>;
+    }>({
         category_id: '',
         unit_id: '',
         warehouse_id: '',
@@ -90,6 +103,7 @@ export default function ProductsIndex({ products, categories, units, warehouses 
         description: '',
         minimum_stock: 0,
         initial_stock: 0,
+        warehouse_stocks: {},
     });
 
     const handleSearchChange = (val: string) => {
@@ -122,16 +136,50 @@ export default function ProductsIndex({ products, categories, units, warehouses 
         setEditingProduct(null);
         reset();
         clearErrors();
-        if (isAdminGudang && userWarehouse) {
-            setData('warehouse_id', String(userWarehouse.id));
-        } else {
-            setData('warehouse_id', '');
-        }
+        const initialWhId = isAdminGudang && userWarehouse 
+            ? String(userWarehouse.id) 
+            : (warehouses.length > 0 ? String(warehouses[0].id) : '');
+        setData({
+            category_id: '',
+            unit_id: '',
+            warehouse_id: initialWhId,
+            sku: '',
+            code: '',
+            name: '',
+            brand: '',
+            packaging: '',
+            description: '',
+            minimum_stock: 0,
+            initial_stock: 0,
+            warehouse_stocks: {},
+        });
         setIsDialogOpen(true);
     };
 
     const openEditDialog = (product: Product) => {
         setEditingProduct(product);
+        const stockMap: Record<number, number> = {};
+
+        // Populate existing stocks from product.stocks relation
+        if (product.stocks && product.stocks.length > 0) {
+            product.stocks.forEach((s) => {
+                stockMap[s.warehouse_id] = s.qty;
+            });
+        }
+
+        // Ensure accessible warehouses have entry (default to 0 if not present)
+        if (isAdminGudang && userWarehouse) {
+            if (stockMap[userWarehouse.id] === undefined) {
+                stockMap[userWarehouse.id] = 0;
+            }
+        } else if (warehouses && warehouses.length > 0) {
+            warehouses.forEach((wh) => {
+                if (stockMap[wh.id] === undefined) {
+                    stockMap[wh.id] = 0;
+                }
+            });
+        }
+
         setData({
             category_id: String(product.category_id),
             unit_id: String(product.unit_id),
@@ -144,6 +192,7 @@ export default function ProductsIndex({ products, categories, units, warehouses 
             description: product.description || '',
             minimum_stock: product.minimum_stock,
             initial_stock: 0,
+            warehouse_stocks: stockMap,
         });
         clearErrors();
         setIsDialogOpen(true);
@@ -716,20 +765,20 @@ export default function ProductsIndex({ products, categories, units, warehouses 
                                     </div>
                                 </div>
 
-                                <div className={`grid ${!editingProduct ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="minimum_stock">Stok Minimum</Label>
-                                        <Input
-                                            id="minimum_stock"
-                                            type="number"
-                                            value={data.minimum_stock}
-                                            onChange={(e) => setData('minimum_stock', parseInt(e.target.value) || 0)}
-                                            min={0}
-                                            required
-                                        />
-                                        {errors.minimum_stock && <p className="text-xs text-red-500">{errors.minimum_stock}</p>}
-                                    </div>
-                                    {!editingProduct && (
+                                {!editingProduct ? (
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="minimum_stock">Stok Minimum</Label>
+                                            <Input
+                                                id="minimum_stock"
+                                                type="number"
+                                                value={data.minimum_stock}
+                                                onChange={(e) => setData('minimum_stock', parseInt(e.target.value) || 0)}
+                                                min={0}
+                                                required
+                                            />
+                                            {errors.minimum_stock && <p className="text-xs text-red-500">{errors.minimum_stock}</p>}
+                                        </div>
                                         <div className="grid gap-2">
                                             <Label htmlFor="initial_stock">Stok Awal (Gudang)</Label>
                                             <Input
@@ -742,8 +791,99 @@ export default function ProductsIndex({ products, categories, units, warehouses 
                                             />
                                             {errors.initial_stock && <p className="text-xs text-red-500">{errors.initial_stock}</p>}
                                         </div>
-                                    )}
-                                </div>
+                                    </div>
+                                ) : (
+                                    <>
+                                        {warehouses.length > 1 && isSuperAdmin ? (
+                                            <div className="space-y-4">
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="grid gap-2">
+                                                        <Label htmlFor="minimum_stock">Stok Minimum</Label>
+                                                        <Input
+                                                            id="minimum_stock"
+                                                            type="number"
+                                                            value={data.minimum_stock}
+                                                            onChange={(e) => setData('minimum_stock', parseInt(e.target.value) || 0)}
+                                                            min={0}
+                                                            required
+                                                        />
+                                                        {errors.minimum_stock && <p className="text-xs text-red-500">{errors.minimum_stock}</p>}
+                                                    </div>
+                                                    <div className="grid gap-2">
+                                                        <Label>Total Sisa Stok</Label>
+                                                        <div className="h-10 px-3 py-2 bg-slate-100 dark:bg-zinc-800/60 rounded-md border border-input flex items-center justify-between font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400">
+                                                            <span>{Object.values(data.warehouse_stocks).reduce((a, b) => a + (Number(b) || 0), 0)}</span>
+                                                            <span className="text-xs text-muted-foreground font-normal">
+                                                                {units.find(u => String(u.id) === String(data.unit_id))?.symbol || 'Satuan'}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="space-y-2 p-3 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl">
+                                                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                                                        Sisa Stok per Gudang
+                                                    </Label>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                        {warehouses.map((wh) => (
+                                                            <div key={wh.id} className="flex items-center justify-between gap-2 p-2 bg-white dark:bg-zinc-800 rounded-lg border border-slate-200/80 dark:border-zinc-700">
+                                                                <span className="text-xs font-medium truncate" title={wh.name}>{wh.name}</span>
+                                                                <Input
+                                                                    type="number"
+                                                                    min={0}
+                                                                    className="w-24 h-8 text-right font-mono"
+                                                                    value={data.warehouse_stocks[wh.id] ?? 0}
+                                                                    onChange={(e) => {
+                                                                        const val = parseInt(e.target.value) || 0;
+                                                                        setData('warehouse_stocks', { ...data.warehouse_stocks, [wh.id]: val });
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor="minimum_stock">Stok Minimum</Label>
+                                                    <Input
+                                                        id="minimum_stock"
+                                                        type="number"
+                                                        value={data.minimum_stock}
+                                                        onChange={(e) => setData('minimum_stock', parseInt(e.target.value) || 0)}
+                                                        min={0}
+                                                        required
+                                                    />
+                                                    {errors.minimum_stock && <p className="text-xs text-red-500">{errors.minimum_stock}</p>}
+                                                </div>
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor="sisa_stok">
+                                                        Sisa Stok Saat Ini
+                                                    </Label>
+                                                    <Input
+                                                        id="sisa_stok"
+                                                        type="number"
+                                                        value={
+                                                            isAdminGudang && userWarehouse
+                                                                ? (data.warehouse_stocks[userWarehouse.id] ?? 0)
+                                                                : (warehouses[0] ? (data.warehouse_stocks[warehouses[0].id] ?? 0) : (data.warehouse_stocks[Number(Object.keys(data.warehouse_stocks)[0])] ?? 0))
+                        }
+                                                        onChange={(e) => {
+                                                            const val = parseInt(e.target.value) || 0;
+                                                            const whId = isAdminGudang && userWarehouse
+                                                                ? userWarehouse.id
+                                                                : (warehouses[0]?.id ?? Number(Object.keys(data.warehouse_stocks)[0]) ?? 1);
+                                                            setData('warehouse_stocks', { ...data.warehouse_stocks, [whId]: val });
+                                                        }}
+                                                        min={0}
+                                                        placeholder="0"
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
 
                                 <div className="grid gap-2">
                                     <Label htmlFor="description">Deskripsi</Label>

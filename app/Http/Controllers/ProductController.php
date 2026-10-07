@@ -22,7 +22,7 @@ class ProductController extends Controller
     public function index(Request $request): Response
     {
         $query = Product::query()
-            ->with(['category', 'unit'])
+            ->with(['category', 'unit', 'stocks.warehouse'])
             ->withSum('stocks as total_stock', 'qty');
 
         if ($request->filled('search')) {
@@ -61,7 +61,8 @@ class ProductController extends Controller
         if ($isSuperAdmin) {
             $warehouses = Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'name', 'code']);
         } elseif ($isAdminGudang) {
-            $userWarehouse = $user->warehouses()->where('is_active', true)->first(['warehouses.id', 'warehouses.name', 'warehouses.code']);
+            $warehouses = $user->warehouses()->where('is_active', true)->get(['warehouses.id', 'warehouses.name', 'warehouses.code']);
+            $userWarehouse = $warehouses->first();
             if (!$userWarehouse) {
                 $userWarehouse = Warehouse::where('is_active', true)->first(['id', 'name', 'code']);
             }
@@ -454,6 +455,9 @@ class ProductController extends Controller
             'packaging' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'minimum_stock' => 'required|integer|min:0',
+            'warehouse_stocks' => 'nullable|array',
+            'warehouse_stocks.*' => 'nullable|integer|min:0',
+            'stock_qty' => 'nullable|integer|min:0',
         ], [
             'sku.required' => 'SKU wajib diisi.',
             'sku.unique' => 'SKU sudah terdaftar.',
@@ -463,10 +467,63 @@ class ProductController extends Controller
             'minimum_stock.required' => 'Stok minimum wajib diisi.',
         ]);
 
-        $product->update($validated);
+        $user = $request->user();
+        $isSuperAdmin = $user->roleModel?->code === 'super_admin';
+        $isAdminGudang = $user->roleModel?->code === 'admin_gudang';
+
+        DB::transaction(function () use ($validated, $product, $user, $isSuperAdmin, $isAdminGudang) {
+            $product->update([
+                'category_id' => $validated['category_id'],
+                'unit_id' => $validated['unit_id'],
+                'sku' => $validated['sku'],
+                'code' => $validated['code'],
+                'name' => $validated['name'],
+                'brand' => $validated['brand'] ?? null,
+                'packaging' => $validated['packaging'] ?? null,
+                'description' => $validated['description'] ?? null,
+                'minimum_stock' => $validated['minimum_stock'],
+            ]);
+
+            // Update warehouse stocks if provided
+            if (isset($validated['warehouse_stocks']) && is_array($validated['warehouse_stocks'])) {
+                foreach ($validated['warehouse_stocks'] as $whId => $qty) {
+                    $whId = (int)$whId;
+                    if ($whId <= 0) continue;
+
+                    // If admin_gudang, ensure warehouse is assigned
+                    if ($isAdminGudang) {
+                        $isAssigned = $user->warehouses()->where('warehouses.id', $whId)->exists();
+                        if (!$isAssigned) continue;
+                    }
+
+                    $stock = Stock::firstOrCreate(
+                        ['warehouse_id' => $whId, 'product_id' => $product->id],
+                        ['qty' => 0]
+                    );
+                    $stock->qty = max(0, (int)$qty);
+                    $stock->save();
+                }
+            } elseif (isset($validated['stock_qty'])) {
+                $targetWhId = null;
+                if ($isAdminGudang) {
+                    $targetWhId = $user->warehouses()->where('is_active', true)->value('warehouses.id');
+                } elseif ($isSuperAdmin) {
+                    $targetWhId = Warehouse::where('is_active', true)->value('id');
+                }
+
+                if ($targetWhId) {
+                    $stock = Stock::firstOrCreate(
+                        ['warehouse_id' => $targetWhId, 'product_id' => $product->id],
+                        ['qty' => 0]
+                    );
+                    $stock->qty = max(0, (int)$validated['stock_qty']);
+                    $stock->save();
+                }
+            }
+        });
 
         return redirect()->route('products.index')
-            ->with('success', 'Barang berhasil diperbarui.');
+            ->with('success', 'Barang dan sisa stok berhasil diperbarui.');
     }
 
     /**
