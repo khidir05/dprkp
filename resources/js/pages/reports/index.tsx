@@ -327,7 +327,7 @@ export default function ReportsIndex({
                     <CardContent className="p-6">
                         <form onSubmit={handleFilterSubmit} className="space-y-6">
                             {/* Type switches grid */}
-                            <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
+                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                                 <Button
                                     type="button"
                                     variant={reportType === 'stock' ? 'default' : 'outline'}
@@ -363,15 +363,6 @@ export default function ReportsIndex({
                                 >
                                     <FileText className="h-4 w-4" />
                                     <span>Rekap Bulanan</span>
-                                </Button>
-                                <Button
-                                    type="button"
-                                    variant={reportType === 'mutation' ? 'default' : 'outline'}
-                                    className="h-10 gap-1.5 text-xs font-semibold rounded-xl"
-                                    onClick={() => handleTypeChange('mutation')}
-                                >
-                                    <ArrowRightLeft className="h-4 w-4" />
-                                    <span>Mutasi Stok</span>
                                 </Button>
                                 <Button
                                     type="button"

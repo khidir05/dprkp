@@ -2,7 +2,7 @@ import { Link, usePage } from '@inertiajs/react';
 import { 
     LayoutGrid, Tags, Ruler, Truck, Warehouse, Package, 
     Users, Boxes, ArrowDownToLine, ClipboardList, 
-    ArrowRightLeft, ShieldAlert, RefreshCw, PackageOpen, 
+    ArrowRightLeft, ShieldAlert, RefreshCw, 
     Shield, FileText, ClipboardCheck
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
@@ -99,11 +99,6 @@ export function AppSidebar() {
                 title: 'Restock Barang',
                 href: '/restock',
                 icon: RefreshCw,
-            },
-            {
-                title: 'Barang Tidak Tersedia',
-                href: '/unavailable-items',
-                icon: PackageOpen,
             }
         );
     }
