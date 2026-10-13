@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, HelpCircle, Printer, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import type { Stock, Warehouse } from '@/types';
 
 type Props = {
@@ -72,92 +73,77 @@ export default function StocksIndex({ stocks, warehouses, filters, lowStockCount
     const isPemohon = role === 'pemohon';
 
     const exportToExcel = () => {
-        let headers: string[] = [];
-        let rows: any[][] = [];
-        let filename = `stok-inventaris-${new Date().toISOString().slice(0, 10)}`;
+        const filename = `stok-inventaris-${new Date().toISOString().slice(0, 10)}`;
+        let sheetData: any[][] = [];
 
         if (isPemohon) {
-            headers = ['No', 'Gudang', 'Barang', 'Kategori', 'Stok Saat Ini'];
-            rows = stocks.data.map((row, idx) => [
-                idx + 1,
-                row.warehouse?.name || '-',
-                row.product?.name || '-',
-                row.product?.category?.name || '-',
-                `${row.qty} ${row.product?.unit?.symbol || ''}`
-            ]);
+            sheetData = [
+                ['No', 'Gudang', 'Barang', 'Kategori', 'Stok Saat Ini', 'Satuan']
+            ];
+            stocks.data.forEach((row, idx) => {
+                sheetData.push([
+                    idx + 1,
+                    row.warehouse?.name || '-',
+                    row.product?.name || '-',
+                    row.product?.category?.name || '-',
+                    Number(row.qty) || 0,
+                    row.product?.unit?.symbol || ''
+                ]);
+            });
         } else {
-            headers = ['No', 'Gudang', 'Barang', 'SKU', 'Kode', 'Kategori', 'Stok Saat Ini', 'Min. Stok', 'Status'];
-            rows = stocks.data.map((row, idx) => {
+            sheetData = [
+                ['No', 'Gudang', 'Barang', 'SKU', 'Kode', 'Kategori', 'Stok Saat Ini', 'Satuan', 'Min. Stok', 'Status']
+            ];
+            stocks.data.forEach((row, idx) => {
                 const isLowStock = row.product && row.qty <= row.product.minimum_stock;
                 const statusStr = isLowStock ? 'Stok Menipis' : 'Aman';
-                return [
+                sheetData.push([
                     idx + 1,
                     row.warehouse?.name || '-',
                     row.product?.name || '-',
                     row.product?.sku || '-',
                     row.product?.code || '-',
                     row.product?.category?.name || '-',
-                    `${row.qty} ${row.product?.unit?.symbol || ''}`,
-                    `${row.product?.minimum_stock ?? 0} ${row.product?.unit?.symbol || ''}`,
+                    Number(row.qty) || 0,
+                    row.product?.unit?.symbol || '',
+                    row.product?.minimum_stock ?? 0,
                     statusStr
-                ];
+                ]);
             });
         }
 
-        // Convert to CSV
-        const csvContent = "\uFEFF" + [
-            headers.join(','),
-            ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))
-        ].join('\n');
+        const ws = XLSX.utils.aoa_to_sheet(sheetData);
+        ws['!cols'] = [
+            { wch: 6 },
+            { wch: 20 },
+            { wch: 32 },
+            { wch: 18 },
+            { wch: 14 },
+            { wch: 18 },
+            { wch: 14 },
+            { wch: 10 },
+            { wch: 12 },
+            { wch: 14 },
+        ];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Stok Barang');
+        XLSX.writeFile(wb, `${filename}.xlsx`);
+    };
 
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.setAttribute("href", url);
-        link.setAttribute("download", `${filename}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+    const handlePrint = () => {
+        const originalTitle = document.title;
+        document.title = '';
+        window.print();
+        setTimeout(() => {
+            document.title = originalTitle;
+        }, 1000);
     };
 
     return (
         <>
             <Head title="Stok Inventaris" />
-            <style dangerouslySetInnerHTML={{__html: `
-                @media print {
-                    aside, nav, header, form, button, .print\\:hidden, [role="button"], .print-hidden-button {
-                        display: none !important;
-                    }
-                    body {
-                        background: white !important;
-                        color: black !important;
-                        margin: 0 !important;
-                        padding: 0 !important;
-                    }
-                    .max-w-7xl, main, .p-6, .space-y-6 {
-                        max-width: 100% !important;
-                        width: 100% !important;
-                        padding: 0 !important;
-                        margin: 0 !important;
-                    }
-                    .bg-white, .dark\\:bg-zinc-900 {
-                        background: transparent !important;
-                        border: none !important;
-                        box-shadow: none !important;
-                        padding: 0 !important;
-                    }
-                    table {
-                        border-collapse: collapse !important;
-                        width: 100% !important;
-                    }
-                    th, td {
-                        border: 1px solid #ddd !important;
-                        padding: 8px !important;
-                    }
-                }
-            `}} />
-            <div className="p-6 space-y-6">
-                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+            <div className="p-6 space-y-6 print:p-0 print:space-y-0">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 print:hidden">
                     <div>
                         <h1 className="text-2xl font-bold tracking-tight">Stok Inventaris</h1>
                         <p className="text-muted-foreground">Lihat level ketersediaan stok barang saat ini di seluruh gudang.</p>
@@ -207,7 +193,7 @@ export default function StocksIndex({ stocks, warehouses, filters, lowStockCount
                             variant="outline" 
                             size="sm" 
                             className="h-9 gap-1.5 rounded-xl text-xs font-semibold border-neutral-200 hover:bg-neutral-50 dark:border-zinc-800" 
-                            onClick={() => window.print()}
+                            onClick={handlePrint}
                         >
                             <Printer className="h-3.5 w-3.5" />
                             <span>Cetak PDF</span>

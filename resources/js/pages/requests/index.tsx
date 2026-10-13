@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Eye, Plus, ArrowUpRight, Printer, Download, Calendar } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import type { ItemRequest } from '@/types';
 
 type Props = {
@@ -80,85 +81,121 @@ export default function RequestsIndex({ requests, filters, role }: Props) {
     };
 
     const exportToExcel = () => {
-        const headers = ['No', 'No. Pengajuan', 'Pemohon', 'Gudang Target', 'Detail Barang', 'Status', 'Tanggal'];
-        const rows = requests.data.map((row, idx) => {
-            const itemsStr = row.request_items?.map((i: any) => `${i.product?.name || ''} (${i.qty_requested} ${i.product?.unit?.symbol || ''})`).join('; ') || '-';
-            
-            // Map status label
-            let statusLabel = row.status;
-            if (row.status === 'pending') statusLabel = 'Menunggu Persetujuan';
-            else if (row.status === 'approved') statusLabel = 'Diproses';
-            else if (row.status === 'rejected') statusLabel = 'Ditolak';
-            else if (row.status === 'delivered') statusLabel = 'Sampai';
-            else if (row.status === 'completed') statusLabel = 'Selesai';
+        const dateStr = new Date().toISOString().slice(0, 10);
+        const filename = `pengajuan-barang-${dateStr}`;
 
-            return [
-                idx + 1,
-                row.request_number,
-                row.requester?.name || row.requester_name || '-',
-                row.warehouse?.name || '-',
-                itemsStr,
-                statusLabel,
-                new Date(row.created_at).toLocaleDateString('id-ID')
-            ];
+        const sheetData: any[][] = [
+            ['', '', '', '', '', '', ''],
+            ['', 'Tanggal', 'Status', 'Pemohon', 'Nama Barang', 'Jumlah', 'Satuan']
+        ];
+
+        const summaryMap: Record<string, { name: string; qty: number; unit: string }> = {};
+
+        requests.data.forEach((row) => {
+            let tanggal = '-';
+            if (row.request_date) {
+                tanggal = String(row.request_date).slice(0, 10);
+            } else if (row.created_at) {
+                try {
+                    tanggal = new Date(row.created_at).toISOString().slice(0, 10);
+                } catch {
+                    tanggal = String(row.created_at).slice(0, 10);
+                }
+            }
+
+            const pemohon = row.requester?.name || row.requester_name || '-';
+
+            // Map status label
+            let statusLabel = 'pengajuan';
+            if (row.status === 'pending') statusLabel = 'menunggu persetujuan';
+            else if (row.status === 'approved') statusLabel = 'disetujui';
+            else if (row.status === 'rejected') statusLabel = 'ditolak';
+            else if (row.status === 'delivered') statusLabel = 'sampai';
+            else if (row.status === 'completed') statusLabel = 'selesai';
+            else if (row.status) statusLabel = row.status;
+
+            if (row.request_items && row.request_items.length > 0) {
+                row.request_items.forEach((item: any) => {
+                    const namaBarang = item.product?.name || '-';
+                    const qty = Number(item.qty_requested) || 0;
+                    const satuan = item.product?.unit?.symbol || item.product?.unit?.name || 'pcs';
+
+                    sheetData.push([
+                        '',
+                        tanggal,
+                        statusLabel,
+                        pemohon,
+                        namaBarang,
+                        qty,
+                        satuan
+                    ]);
+
+                    const key = namaBarang.toLowerCase().trim();
+                    if (!summaryMap[key]) {
+                        summaryMap[key] = { name: namaBarang, qty: 0, unit: satuan };
+                    }
+                    summaryMap[key].qty += qty;
+                });
+            } else {
+                sheetData.push([
+                    '',
+                    tanggal,
+                    statusLabel,
+                    pemohon,
+                    '-',
+                    0,
+                    '-'
+                ]);
+            }
         });
 
-        const filename = `pengajuan-barang-${new Date().toISOString().slice(0, 10)}`;
+        // Append Keterangan & Total Keseluruhan per Item barang
+        sheetData.push(['', '', '', '', '', '', '']);
+        sheetData.push(['', 'Keterangan :', '', '', '', '', '']);
+        sheetData.push(['', 'Total Keseluruhan per Item barang', '', '', '', '', '']);
 
-        // Convert to CSV
-        const csvContent = "\uFEFF" + [
-            headers.join(','),
-            ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))
-        ].join('\n');
+        Object.values(summaryMap).forEach((item) => {
+            sheetData.push([
+                '',
+                item.name,
+                '',
+                item.qty,
+                item.unit,
+                '',
+                ''
+            ]);
+        });
 
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.setAttribute("href", url);
-        link.setAttribute("download", `${filename}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        const ws = XLSX.utils.aoa_to_sheet(sheetData);
+        ws['!cols'] = [
+            { wch: 4 },  // Margin
+            { wch: 14 }, // Tanggal
+            { wch: 22 }, // Status
+            { wch: 24 }, // Pemohon
+            { wch: 32 }, // Nama Barang
+            { wch: 10 }, // Jumlah
+            { wch: 12 }, // Satuan
+        ];
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Pengajuan Barang');
+        XLSX.writeFile(wb, `${filename}.xlsx`);
+    };
+
+    const handlePrint = () => {
+        const originalTitle = document.title;
+        document.title = '';
+        window.print();
+        setTimeout(() => {
+            document.title = originalTitle;
+        }, 1000);
     };
 
     return (
         <>
             <Head title="Pengajuan Barang" />
-            <style dangerouslySetInnerHTML={{__html: `
-                @media print {
-                    aside, nav, header, form, button, .print\\:hidden, [role="button"], .print-hidden-button {
-                        display: none !important;
-                    }
-                    body {
-                        background: white !important;
-                        color: black !important;
-                        margin: 0 !important;
-                        padding: 0 !important;
-                    }
-                    .max-w-7xl, main, .p-6, .space-y-6 {
-                        max-width: 100% !important;
-                        width: 100% !important;
-                        padding: 0 !important;
-                        margin: 0 !important;
-                    }
-                    .bg-white, .dark\\:bg-zinc-900 {
-                        background: transparent !important;
-                        border: none !important;
-                        box-shadow: none !important;
-                        padding: 0 !important;
-                    }
-                    table {
-                        border-collapse: collapse !important;
-                        width: 100% !important;
-                    }
-                    th, td {
-                        border: 1px solid #ddd !important;
-                        padding: 8px !important;
-                    }
-                }
-            `}} />
-            <div className="p-6 space-y-6">
-                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+            <div className="p-6 space-y-6 print:p-0 print:space-y-0">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 print:hidden">
                     <div>
                         <h1 className="text-2xl font-bold tracking-tight">Pengajuan Barang</h1>
                         <p className="text-muted-foreground">Ajukan dan kelola pengajuan kebutuhan barang kantor.</p>
@@ -207,7 +244,7 @@ export default function RequestsIndex({ requests, filters, role }: Props) {
                             variant="outline" 
                             size="sm" 
                             className="h-9 gap-1.5 rounded-xl text-xs font-semibold border-neutral-200 hover:bg-neutral-50 dark:border-zinc-800" 
-                            onClick={() => window.print()}
+                            onClick={handlePrint}
                         >
                             <Printer className="h-3.5 w-3.5" />
                             <span>Cetak PDF</span>
@@ -258,7 +295,7 @@ export default function RequestsIndex({ requests, filters, role }: Props) {
                                     <div className="text-xs text-muted-foreground font-mono">{req.warehouse?.code}</div>
                                 </td>
                                 <td className="p-4">{getStatusBadge(req.status)}</td>
-                                <td className="p-4">
+                                <td className="p-4 print:hidden">
                                     <Button asChild variant="outline" size="icon" className="h-8 w-8 text-neutral-600">
                                         <Link href={`/requests/${req.id}`}>
                                             <Eye className="h-4 w-4" />

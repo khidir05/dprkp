@@ -76,7 +76,7 @@ export default function DataTable<T>({
 
     return (
         <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between print:hidden">
                 {onSearchChange !== undefined ? (
                     <div className="relative flex-1 max-w-sm">
                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -113,7 +113,7 @@ export default function DataTable<T>({
                 </div>
             </div>
 
-            <div className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden">
+            <div className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden print:border-none print:shadow-none print:rounded-none">
                 <Table>
                     <TableHeader className="bg-muted/50">
                         <TableRow>
@@ -143,7 +143,7 @@ export default function DataTable<T>({
 
             {/* Pagination */}
             {paginationLinks && paginationLinks.length > 3 && (
-                <div className="flex items-center justify-center space-x-1 py-4">
+                <div className="flex items-center justify-center space-x-1 py-4 print:hidden">
                     {paginationLinks.map((link: any, idx: number) => {
                         const isPrevOrNext = link.label.includes('Previous') || link.label.includes('Next');
                         let label = link.label;

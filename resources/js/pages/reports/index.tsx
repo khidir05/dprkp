@@ -21,6 +21,7 @@ import {
     Printer,
     Download
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 type WarehouseType = {
     id: number;
@@ -116,103 +117,354 @@ export default function ReportsIndex({
     };
 
     const exportToExcel = () => {
-        let headers: string[] = [];
-        let rows: any[][] = [];
-        let filename = `laporan-${type}-${new Date().toISOString().slice(0, 10)}`;
+        const dateStr = new Date().toISOString().slice(0, 10);
+        let filename = `laporan-${type}-${dateStr}`;
 
-        if (type === 'stock') {
-            headers = ['No', 'Gudang', 'Nama Barang', 'SKU', 'Kode', 'Kategori', 'Stok Kuantitas'];
-            rows = reportData.map((row, idx) => [
-                idx + 1,
-                row.warehouse?.name || '-',
-                row.product?.name || '-',
-                row.product?.sku || '-',
-                row.product?.code || '-',
-                row.product?.category?.name || '-',
-                `${row.qty} ${row.product?.unit?.symbol || ''}`
-            ]);
-        } else if (type === 'inbound') {
-            headers = ['No', 'No. Inbound', 'Supplier', 'Gudang', 'Pencatat', 'Detail Barang', 'Tanggal Inbound'];
-            rows = reportData.map((row, idx) => {
-                const itemsStr = row.inbound_items?.map((i: any) => `${i.product?.name || ''} (${i.qty} ${i.product?.unit?.symbol || ''})`).join('; ') || '-';
-                return [
-                    idx + 1,
-                    row.transaction_number,
-                    row.supplier?.name || '-',
-                    row.warehouse?.name || '-',
-                    row.created_by_user?.name || '-',
-                    itemsStr,
-                    new Date(row.transaction_date).toLocaleDateString('id-ID')
-                ];
+        if (type === 'outbound') {
+            filename = `laporan-barang-keluar-${dateStr}`;
+            const sheetData: any[][] = [
+                ['', '', '', '', '', '', ''],
+                ['', 'Tanggal', 'Status', 'Pemohon', 'Nama Barang', 'Jumlah', 'Satuan']
+            ];
+
+            const summaryMap: Record<string, { name: string; qty: number; unit: string }> = {};
+
+            reportData.forEach((row) => {
+                let tanggal = '-';
+                if (row.transaction_date) {
+                    tanggal = String(row.transaction_date).slice(0, 10);
+                } else if (row.created_at) {
+                    try {
+                        tanggal = new Date(row.created_at).toISOString().slice(0, 10);
+                    } catch {
+                        tanggal = String(row.created_at).slice(0, 10);
+                    }
+                }
+
+                const pemohon = row.item_request?.requester?.name || row.item_request?.requester_name || '-';
+                const status = 'barang keluar';
+
+                if (row.outbound_items && row.outbound_items.length > 0) {
+                    row.outbound_items.forEach((item: any) => {
+                        const namaBarang = item.product?.name || '-';
+                        const qty = Number(item.qty) || 0;
+                        const satuan = item.product?.unit?.symbol || item.product?.unit?.name || 'pcs';
+
+                        sheetData.push([
+                            '',
+                            tanggal,
+                            status,
+                            pemohon,
+                            namaBarang,
+                            qty,
+                            satuan
+                        ]);
+
+                        const key = namaBarang.toLowerCase().trim();
+                        if (!summaryMap[key]) {
+                            summaryMap[key] = { name: namaBarang, qty: 0, unit: satuan };
+                        }
+                        summaryMap[key].qty += qty;
+                    });
+                }
             });
-        } else if (type === 'outbound') {
-            headers = ['No', 'No. Outbound', 'Penerima', 'Gudang', 'Petugas Dispatch', 'Detail Barang', 'Tanggal Outbound'];
-            rows = reportData.map((row, idx) => {
-                const itemsStr = row.outbound_items?.map((i: any) => `${i.product?.name || ''} (${i.qty} ${i.product?.unit?.symbol || ''})`).join('; ') || '-';
-                return [
-                    idx + 1,
-                    row.transaction_number,
-                    row.item_request?.requester?.name || '-',
-                    row.warehouse?.name || '-',
-                    row.created_by_user?.name || '-',
-                    itemsStr,
-                    new Date(row.transaction_date).toLocaleDateString('id-ID')
-                ];
+
+            // Append Keterangan / Total Keseluruhan per Item barang
+            sheetData.push(['', '', '', '', '', '', '']);
+            sheetData.push(['', 'Keterangan :', '', '', '', '', '']);
+            sheetData.push(['', 'Total Keseluruhan per Item barang', '', '', '', '', '']);
+
+            Object.values(summaryMap).forEach((item) => {
+                sheetData.push([
+                    '',
+                    item.name,
+                    '',
+                    item.qty,
+                    item.unit,
+                    '',
+                    ''
+                ]);
             });
-        } else if (type === 'outbound_monthly') {
-            headers = ['No', 'Bulan', 'Gudang', 'Nama Barang', 'SKU', 'Kode', 'Kategori', 'Total Keluar'];
-            rows = reportData.map((row, idx) => [
-                idx + 1,
-                row.month_name,
-                row.warehouse_name || '-',
-                row.product_name,
-                row.product_sku,
-                row.product_code,
-                row.category_name,
-                `${row.total_qty} ${row.unit_symbol}`
-            ]);
-        } else if (type === 'mutation') {
-            headers = ['No', 'No. Mutasi', 'Gudang Asal', 'Gudang Tujuan', 'Nama Barang', 'Jumlah', 'Tanggal Mutasi', 'Status'];
-            rows = reportData.map((row, idx) => [
-                idx + 1,
-                row.mutation_number,
-                row.source_warehouse?.name || '-',
-                row.destination_warehouse?.name || '-',
-                row.product?.name || '-',
-                `${row.qty} ${row.product?.unit?.symbol || ''}`,
-                new Date(row.created_at).toLocaleDateString('id-ID'),
-                row.status
-            ]);
-        } else if (type === 'request') {
-            headers = ['No', 'No. Pengajuan', 'Pemohon', 'Gudang Target', 'Detail Barang', 'Status', 'Tanggal'];
-            rows = reportData.map((row, idx) => {
-                const itemsStr = row.request_items?.map((i: any) => `${i.product?.name || ''} (${i.qty_requested} ${i.product?.unit?.symbol || ''})`).join('; ') || '-';
-                return [
-                    idx + 1,
-                    row.request_number,
-                    row.requester?.name || '-',
-                    row.warehouse?.name || '-',
-                    itemsStr,
-                    row.status,
-                    new Date(row.created_at).toLocaleDateString('id-ID')
-                ];
-            });
+
+            const ws = XLSX.utils.aoa_to_sheet(sheetData);
+            ws['!cols'] = [
+                { wch: 4 },  // Margin
+                { wch: 14 }, // Tanggal
+                { wch: 16 }, // Status
+                { wch: 24 }, // Pemohon
+                { wch: 32 }, // Nama Barang
+                { wch: 10 }, // Jumlah
+                { wch: 12 }, // Satuan
+            ];
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Barang Keluar');
+            XLSX.writeFile(wb, `${filename}.xlsx`);
+            return;
         }
 
-        // Convert to CSV
-        const csvContent = "\uFEFF" + [
-            headers.join(','),
-            ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))
-        ].join('\n');
+        if (type === 'inbound') {
+            filename = `laporan-barang-masuk-${dateStr}`;
+            const sheetData: any[][] = [
+                ['', '', '', '', '', '', ''],
+                ['', 'Tanggal', 'Status', 'Supplier', 'Nama Barang', 'Jumlah', 'Satuan']
+            ];
 
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.setAttribute("href", url);
-        link.setAttribute("download", `${filename}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+            const summaryMap: Record<string, { name: string; qty: number; unit: string }> = {};
+
+            reportData.forEach((row) => {
+                let tanggal = '-';
+                if (row.transaction_date) {
+                    tanggal = String(row.transaction_date).slice(0, 10);
+                } else if (row.created_at) {
+                    try {
+                        tanggal = new Date(row.created_at).toISOString().slice(0, 10);
+                    } catch {
+                        tanggal = String(row.created_at).slice(0, 10);
+                    }
+                }
+
+                const supplier = row.supplier?.name || '-';
+                const status = 'barang masuk';
+
+                if (row.inbound_items && row.inbound_items.length > 0) {
+                    row.inbound_items.forEach((item: any) => {
+                        const namaBarang = item.product?.name || '-';
+                        const qty = Number(item.qty) || 0;
+                        const satuan = item.product?.unit?.symbol || item.product?.unit?.name || 'pcs';
+
+                        sheetData.push([
+                            '',
+                            tanggal,
+                            status,
+                            supplier,
+                            namaBarang,
+                            qty,
+                            satuan
+                        ]);
+
+                        const key = namaBarang.toLowerCase().trim();
+                        if (!summaryMap[key]) {
+                            summaryMap[key] = { name: namaBarang, qty: 0, unit: satuan };
+                        }
+                        summaryMap[key].qty += qty;
+                    });
+                }
+            });
+
+            sheetData.push(['', '', '', '', '', '', '']);
+            sheetData.push(['', 'Keterangan :', '', '', '', '', '']);
+            sheetData.push(['', 'Total Keseluruhan per Item barang', '', '', '', '', '']);
+
+            Object.values(summaryMap).forEach((item) => {
+                sheetData.push([
+                    '',
+                    item.name,
+                    '',
+                    item.qty,
+                    item.unit,
+                    '',
+                    ''
+                ]);
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(sheetData);
+            ws['!cols'] = [
+                { wch: 4 },
+                { wch: 14 },
+                { wch: 16 },
+                { wch: 24 },
+                { wch: 32 },
+                { wch: 10 },
+                { wch: 12 },
+            ];
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Barang Masuk');
+            XLSX.writeFile(wb, `${filename}.xlsx`);
+            return;
+        }
+
+        if (type === 'stock') {
+            filename = `laporan-stok-${dateStr}`;
+            const sheetData: any[][] = [
+                ['No', 'Gudang', 'Nama Barang', 'SKU', 'Kode', 'Kategori', 'Stok Kuantitas', 'Satuan']
+            ];
+
+            let totalQty = 0;
+            reportData.forEach((row, idx) => {
+                const qty = Number(row.qty) || 0;
+                totalQty += qty;
+                sheetData.push([
+                    idx + 1,
+                    row.warehouse?.name || '-',
+                    row.product?.name || '-',
+                    row.product?.sku || '-',
+                    row.product?.code || '-',
+                    row.product?.category?.name || '-',
+                    qty,
+                    row.product?.unit?.symbol || '-'
+                ]);
+            });
+
+            sheetData.push(['', '', '', '', '', 'Total Keseluruhan:', totalQty, '']);
+
+            const ws = XLSX.utils.aoa_to_sheet(sheetData);
+            ws['!cols'] = [
+                { wch: 6 },
+                { wch: 20 },
+                { wch: 32 },
+                { wch: 18 },
+                { wch: 14 },
+                { wch: 20 },
+                { wch: 14 },
+                { wch: 10 },
+            ];
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Laporan Stok');
+            XLSX.writeFile(wb, `${filename}.xlsx`);
+            return;
+        }
+
+        if (type === 'outbound_monthly') {
+            filename = `rekap-bulanan-keluar-${dateStr}`;
+            const sheetData: any[][] = [
+                ['No', 'Bulan', 'Gudang', 'Nama Barang', 'SKU', 'Kode', 'Kategori', 'Total Keluar', 'Satuan']
+            ];
+
+            reportData.forEach((row, idx) => {
+                sheetData.push([
+                    idx + 1,
+                    row.month_name,
+                    row.warehouse_name || '-',
+                    row.product_name,
+                    row.product_sku,
+                    row.product_code,
+                    row.category_name,
+                    Number(row.total_qty) || 0,
+                    row.unit_symbol || '-'
+                ]);
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(sheetData);
+            ws['!cols'] = [
+                { wch: 6 },
+                { wch: 18 },
+                { wch: 20 },
+                { wch: 32 },
+                { wch: 18 },
+                { wch: 14 },
+                { wch: 20 },
+                { wch: 14 },
+                { wch: 10 },
+            ];
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Rekap Bulanan');
+            XLSX.writeFile(wb, `${filename}.xlsx`);
+            return;
+        }
+
+        if (type === 'request') {
+            filename = `laporan-pengajuan-${dateStr}`;
+            const sheetData: any[][] = [
+                ['', '', '', '', '', '', ''],
+                ['', 'Tanggal', 'Status', 'Pemohon', 'Nama Barang', 'Jumlah', 'Satuan']
+            ];
+
+            const summaryMap: Record<string, { name: string; qty: number; unit: string }> = {};
+
+            reportData.forEach((row) => {
+                let tanggal = '-';
+                if (row.request_date) {
+                    tanggal = String(row.request_date).slice(0, 10);
+                } else if (row.created_at) {
+                    try {
+                        tanggal = new Date(row.created_at).toISOString().slice(0, 10);
+                    } catch {
+                        tanggal = String(row.created_at).slice(0, 10);
+                    }
+                }
+
+                const pemohon = row.requester?.name || row.requester_name || '-';
+
+                let statusLabel = 'pengajuan';
+                if (row.status === 'pending') statusLabel = 'menunggu persetujuan';
+                else if (row.status === 'approved') statusLabel = 'disetujui';
+                else if (row.status === 'rejected') statusLabel = 'ditolak';
+                else if (row.status === 'delivered') statusLabel = 'sampai';
+                else if (row.status === 'completed') statusLabel = 'selesai';
+                else if (row.status) statusLabel = row.status;
+
+                if (row.request_items && row.request_items.length > 0) {
+                    row.request_items.forEach((item: any) => {
+                        const namaBarang = item.product?.name || '-';
+                        const qty = Number(item.qty_requested) || 0;
+                        const satuan = item.product?.unit?.symbol || item.product?.unit?.name || 'pcs';
+
+                        sheetData.push([
+                            '',
+                            tanggal,
+                            statusLabel,
+                            pemohon,
+                            namaBarang,
+                            qty,
+                            satuan
+                        ]);
+
+                        const key = namaBarang.toLowerCase().trim();
+                        if (!summaryMap[key]) {
+                            summaryMap[key] = { name: namaBarang, qty: 0, unit: satuan };
+                        }
+                        summaryMap[key].qty += qty;
+                    });
+                } else {
+                    sheetData.push([
+                        '',
+                        tanggal,
+                        statusLabel,
+                        pemohon,
+                        '-',
+                        0,
+                        '-'
+                    ]);
+                }
+            });
+
+            // Append Keterangan & Total Keseluruhan per Item barang
+            sheetData.push(['', '', '', '', '', '', '']);
+            sheetData.push(['', 'Keterangan :', '', '', '', '', '']);
+            sheetData.push(['', 'Total Keseluruhan per Item barang', '', '', '', '', '']);
+
+            Object.values(summaryMap).forEach((item) => {
+                sheetData.push([
+                    '',
+                    item.name,
+                    '',
+                    item.qty,
+                    item.unit,
+                    '',
+                    ''
+                ]);
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(sheetData);
+            ws['!cols'] = [
+                { wch: 4 },  // Margin
+                { wch: 14 }, // Tanggal
+                { wch: 22 }, // Status
+                { wch: 24 }, // Pemohon
+                { wch: 32 }, // Nama Barang
+                { wch: 10 }, // Jumlah
+                { wch: 12 }, // Satuan
+            ];
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Laporan Pengajuan');
+            XLSX.writeFile(wb, `${filename}.xlsx`);
+            return;
+        }
     };
 
     // Calculate dynamic stats summary for the cards
@@ -275,44 +527,20 @@ export default function ReportsIndex({
 
     const stats = getSummaryStats();
 
+    const handlePrint = () => {
+        const originalTitle = document.title;
+        document.title = '';
+        window.print();
+        setTimeout(() => {
+            document.title = originalTitle;
+        }, 1000);
+    };
+
     return (
         <>
             <Head title="Laporan Inventaris & Transaksi" />
-            <style dangerouslySetInnerHTML={{__html: `
-                @media print {
-                    aside, nav, header, form, button, .print\\:hidden, [role="button"], .print-hidden-button {
-                        display: none !important;
-                    }
-                    body {
-                        background: white !important;
-                        color: black !important;
-                        margin: 0 !important;
-                        padding: 0 !important;
-                    }
-                    .max-w-7xl, main, .p-6, .space-y-6 {
-                        max-width: 100% !important;
-                        width: 100% !important;
-                        padding: 0 !important;
-                        margin: 0 !important;
-                    }
-                    .bg-white, .dark\\:bg-zinc-900 {
-                        background: transparent !important;
-                        border: none !important;
-                        box-shadow: none !important;
-                        padding: 0 !important;
-                    }
-                    table {
-                        border-collapse: collapse !important;
-                        width: 100% !important;
-                    }
-                    th, td {
-                        border: 1px solid #ddd !important;
-                        padding: 8px !important;
-                    }
-                }
-            `}} />
-            <div className="p-6 space-y-6 max-w-7xl mx-auto">
-                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+            <div className="p-6 space-y-6 max-w-7xl mx-auto print:p-0 print:space-y-0">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 print:hidden">
                     <div>
                         <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
                             <FileText className="h-6 w-6 text-indigo-600" />
@@ -323,7 +551,7 @@ export default function ReportsIndex({
                 </div>
 
                 {/* Filter Panel */}
-                <Card className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm overflow-hidden rounded-2xl">
+                <Card className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm overflow-hidden rounded-2xl print:hidden">
                     <CardContent className="p-6">
                         <form onSubmit={handleFilterSubmit} className="space-y-6">
                             {/* Type switches grid */}
@@ -431,7 +659,7 @@ export default function ReportsIndex({
                         </form>
                     </CardContent>
                 </Card>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 print:hidden">
                     <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-950/30 dark:to-indigo-950/20 border border-indigo-100/50 dark:border-indigo-900/30 rounded-2xl p-6 shadow-sm flex items-center justify-between">
                         <div>
                             <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">{stats.title1}</div>
@@ -450,15 +678,15 @@ export default function ReportsIndex({
                 </div>
 
                 {/* Report Table */}
-                <div className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden p-6 space-y-4">
-                    <div className="flex justify-between items-center">
+                <div className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden p-6 space-y-4 print:p-0 print:border-none print:shadow-none print:space-y-0">
+                    <div className="flex justify-between items-center print:hidden">
                         <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Rincian Data Laporan</h2>
                         <div className="flex items-center gap-2 print-hidden-button">
                             <Button 
                                 variant="outline" 
                                 size="sm" 
                                 className="h-8 gap-1.5 rounded-xl text-xs font-semibold border-neutral-200 hover:bg-neutral-50 dark:border-zinc-800" 
-                                onClick={() => window.print()}
+                                onClick={handlePrint}
                             >
                                 <Printer className="h-3.5 w-3.5" />
                                 <span>Cetak PDF</span>

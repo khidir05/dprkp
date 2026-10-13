@@ -20,7 +20,7 @@ class ItemRequestController extends Controller
     public function index(Request $request): Response
     {
         $user = $request->user();
-        $query = ItemRequest::query()->with(['requester', 'warehouse', 'approvedBy']);
+        $query = ItemRequest::query()->with(['requester', 'warehouse', 'approvedBy', 'requestItems.product.unit']);
 
         // Role-based filtering
         if ($user->roleModel->code === 'pemohon') {
