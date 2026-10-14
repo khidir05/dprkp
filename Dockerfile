@@ -18,6 +18,10 @@ COPY app/ app/
 COPY public/ public/
 COPY vite.config.ts tsconfig.json components.json eslint.config.js ./
 
+# Stub PHP CLI & set WAYFINDER_COMMAND so @laravel/vite-plugin-wayfinder does not fail in containerized build
+ENV WAYFINDER_COMMAND="true"
+RUN printf '#!/bin/sh\nexit 0\n' > /usr/local/bin/php && chmod +x /usr/local/bin/php
+
 # Compile production frontend assets into public/build
 RUN npm run build
 
