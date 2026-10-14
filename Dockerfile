@@ -1,12 +1,27 @@
 # ==============================================================================
-# Stage 1: Install Composer Dependencies
+# Stage 1: Build Frontend Assets & Wayfinder Routes (PHP 8.4 + Node 22)
 # ==============================================================================
-FROM composer:2 AS composer_builder
+FROM php:8.4-fpm-bookworm AS frontend_builder
+
+# Install git and unzip for Composer
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy Node.js & npm from official node:22-slim
+COPY --from=node:22-slim /usr/local/bin/node /usr/local/bin/node
+COPY --from=node:22-slim /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+    && ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
+
+# Copy Composer binary
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
 
+# Install composer dependencies (using PHP 8.4 so platform_check passes)
 COPY composer.json composer.lock ./
-
 RUN composer install \
     --no-dev \
     --no-interaction \
@@ -14,22 +29,11 @@ RUN composer install \
     --optimize-autoloader \
     --no-scripts
 
-# ==============================================================================
-# Stage 2: Build Frontend Assets (Vite + React + Inertia + Tailwind CSS + Wayfinder)
-# ==============================================================================
-FROM node:22-slim AS node_builder
-
-# Install php-cli so Laravel Wayfinder can dynamically generate TypeScript routes and actions
-RUN apt-get update && apt-get install -y --no-install-recommends php-cli && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /app
-
-# Copy package manifests & install npm dependencies
+# Install npm dependencies
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --prefer-offline || npm install
 
-# Copy composer vendor & backend files needed by Wayfinder to scan Laravel routes
-COPY --from=composer_builder /app/vendor vendor/
+# Copy application files needed for artisan & Wayfinder route analysis
 COPY artisan ./
 COPY app/ app/
 COPY bootstrap/ bootstrap/
@@ -39,13 +43,13 @@ COPY resources/ resources/
 COPY public/ public/
 COPY vite.config.ts tsconfig.json components.json eslint.config.js ./
 
-# Compile production frontend assets into public/build (Wayfinder generates routes & actions via php-cli)
+# Compile production frontend assets into public/build (Wayfinder executes php artisan wayfinder:generate on PHP 8.4)
 RUN npm run build
 
 # ==============================================================================
-# Stage 3: Production Runtime (PHP 8.3-FPM + Nginx + Supervisor)
+# Stage 2: Production Runtime (PHP 8.4-FPM + Nginx + Supervisor)
 # ==============================================================================
-FROM php:8.3-fpm-bookworm
+FROM php:8.4-fpm-bookworm
 
 LABEL maintainer="Khidir Afwan Amlabar" \
       project="DPRKP DKI Jakarta"
@@ -84,8 +88,8 @@ RUN install-php-extensions \
     pcntl \
     exif
 
-# Copy Composer binary from composer_builder
-COPY --from=composer_builder /usr/bin/composer /usr/bin/composer
+# Copy Composer binary
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
@@ -101,13 +105,13 @@ COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 # Copy application source code
 COPY . /var/www/html
 
-# Copy vendor dependencies from composer_builder
-COPY --from=composer_builder /app/vendor /var/www/html/vendor
+# Copy vendor dependencies from builder
+COPY --from=frontend_builder /app/vendor /var/www/html/vendor
 
-# Copy compiled frontend assets and generated routes/actions from node_builder
-COPY --from=node_builder /app/public/build /var/www/html/public/build
-COPY --from=node_builder /app/resources/js/routes /var/www/html/resources/js/routes
-COPY --from=node_builder /app/resources/js/actions /var/www/html/resources/js/actions
+# Copy compiled frontend assets and generated routes/actions from builder
+COPY --from=frontend_builder /app/public/build /var/www/html/public/build
+COPY --from=frontend_builder /app/resources/js/routes /var/www/html/resources/js/routes
+COPY --from=frontend_builder /app/resources/js/actions /var/www/html/resources/js/actions
 
 # Dump optimized autoloader
 RUN composer dump-autoload --optimize --no-dev --classmap-authoritative
