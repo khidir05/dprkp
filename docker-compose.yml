@@ -1,0 +1,76 @@
+services:
+  # ============================================================================
+  # Application & Web Server (Laravel 13 + Inertia React + Nginx + PHP 8.3-FPM)
+  # ============================================================================
+  dprkp-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: dprkp-web:latest
+    container_name: dprkp-web
+    restart: unless-stopped
+    ports:
+      # Port Host 8006 -> Port Container 80
+      # AMAN: Port 3000, 8000 (ku-garut), 8005 (kurikulum), 8090 (jenkins), 9000/9443 (portainer) sudah terpakai
+      - "${APP_PORT:-8006}:80"
+    environment:
+      APP_NAME: "${APP_NAME:-DPRKP DKI JAKARTA}"
+      APP_ENV: "${APP_ENV:-production}"
+      APP_KEY: "${APP_KEY:-base64:74N2+Hp6rtlC0WmYdb3TKoV0kUdAgEstkTxKSrLuuCA=}"
+      APP_DEBUG: "${APP_DEBUG:-false}"
+      APP_URL: "${APP_URL:-http://localhost:8006}"
+      LOG_CHANNEL: stderr
+      DB_CONNECTION: pgsql
+      DB_HOST: dprkp-db
+      DB_PORT: 5432
+      DB_DATABASE: "${DB_DATABASE:-dprkp}"
+      DB_USERNAME: "${DB_USERNAME:-postgres}"
+      DB_PASSWORD: "${DB_PASSWORD:-myamlabar}"
+      SESSION_DRIVER: database
+      CACHE_STORE: database
+      QUEUE_CONNECTION: database
+      AUTORUN_MIGRATIONS: "${AUTORUN_MIGRATIONS:-true}"
+      AUTORUN_SEED: "${AUTORUN_SEED:-false}"
+    volumes:
+      - dprkp-storage:/var/www/html/storage/app/public
+    depends_on:
+      dprkp-db:
+        condition: service_healthy
+    networks:
+      - dprkp-network
+
+  # ============================================================================
+  # PostgreSQL Database Server (PostgreSQL 16 Alpine)
+  # ============================================================================
+  dprkp-db:
+    image: postgres:16-alpine
+    container_name: dprkp-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: "${DB_DATABASE:-dprkp}"
+      POSTGRES_USER: "${DB_USERNAME:-postgres}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD:-myamlabar}"
+    ports:
+      # Port Host 5436 -> Port Container 5432
+      # AMAN: Port 5432 (proboard), 5433 (ku-garut), 5435 (kurikulum) sudah terpakai
+      - "${FORWARD_DB_PORT:-5436}:5432"
+    volumes:
+      - dprkp-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_DATABASE:-dprkp}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dprkp-network
+
+networks:
+  dprkp-network:
+    name: dprkp-network
+    driver: bridge
+
+volumes:
+  dprkp-db-data:
+    name: dprkp-db-data
+  dprkp-storage:
+    name: dprkp-storage
