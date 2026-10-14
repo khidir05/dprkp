@@ -1,32 +1,5 @@
 # ==============================================================================
-# Stage 1: Build Frontend Assets (Vite + React + Inertia + Tailwind CSS)
-# ==============================================================================
-FROM node:22-slim AS node_builder
-
-WORKDIR /app
-
-# Copy package manifests
-COPY package.json package-lock.json ./
-
-# Install npm dependencies
-RUN npm ci --no-audit --prefer-offline || npm install
-
-# Copy source files needed for Vite build & Wayfinder route analysis
-COPY resources/ resources/
-COPY routes/ routes/
-COPY app/ app/
-COPY public/ public/
-COPY vite.config.ts tsconfig.json components.json eslint.config.js ./
-
-# Stub PHP CLI & set WAYFINDER_COMMAND so @laravel/vite-plugin-wayfinder does not fail in containerized build
-ENV WAYFINDER_COMMAND="true"
-RUN printf '#!/bin/sh\nexit 0\n' > /usr/local/bin/php && chmod +x /usr/local/bin/php
-
-# Compile production frontend assets into public/build
-RUN npm run build
-
-# ==============================================================================
-# Stage 2: Install Composer Dependencies
+# Stage 1: Install Composer Dependencies
 # ==============================================================================
 FROM composer:2 AS composer_builder
 
@@ -40,6 +13,34 @@ RUN composer install \
     --prefer-dist \
     --optimize-autoloader \
     --no-scripts
+
+# ==============================================================================
+# Stage 2: Build Frontend Assets (Vite + React + Inertia + Tailwind CSS + Wayfinder)
+# ==============================================================================
+FROM node:22-slim AS node_builder
+
+# Install php-cli so Laravel Wayfinder can dynamically generate TypeScript routes and actions
+RUN apt-get update && apt-get install -y --no-install-recommends php-cli && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy package manifests & install npm dependencies
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --prefer-offline || npm install
+
+# Copy composer vendor & backend files needed by Wayfinder to scan Laravel routes
+COPY --from=composer_builder /app/vendor vendor/
+COPY artisan ./
+COPY app/ app/
+COPY bootstrap/ bootstrap/
+COPY config/ config/
+COPY routes/ routes/
+COPY resources/ resources/
+COPY public/ public/
+COPY vite.config.ts tsconfig.json components.json eslint.config.js ./
+
+# Compile production frontend assets into public/build (Wayfinder generates routes & actions via php-cli)
+RUN npm run build
 
 # ==============================================================================
 # Stage 3: Production Runtime (PHP 8.3-FPM + Nginx + Supervisor)
@@ -103,8 +104,10 @@ COPY . /var/www/html
 # Copy vendor dependencies from composer_builder
 COPY --from=composer_builder /app/vendor /var/www/html/vendor
 
-# Copy compiled frontend assets from node_builder
+# Copy compiled frontend assets and generated routes/actions from node_builder
 COPY --from=node_builder /app/public/build /var/www/html/public/build
+COPY --from=node_builder /app/resources/js/routes /var/www/html/resources/js/routes
+COPY --from=node_builder /app/resources/js/actions /var/www/html/resources/js/actions
 
 # Dump optimized autoloader
 RUN composer dump-autoload --optimize --no-dev --classmap-authoritative
