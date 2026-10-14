@@ -1,27 +1,32 @@
 # ==============================================================================
-# Stage 1: Build Frontend Assets & Wayfinder Routes (PHP 8.4 + Node 22)
+# Stage 1: Build Frontend Assets (Vite + React + Inertia + Tailwind CSS)
 # ==============================================================================
-FROM php:8.4-fpm-bookworm AS frontend_builder
-
-# Install git and unzip for Composer
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    git \
-    unzip \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy Node.js & npm from official node:22-slim
-COPY --from=node:22-slim /usr/local/bin/node /usr/local/bin/node
-COPY --from=node:22-slim /usr/local/lib/node_modules /usr/local/lib/node_modules
-RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
-    && ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
-
-# Copy Composer binary
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+FROM node:22-slim AS node_builder
 
 WORKDIR /app
 
-# Install composer dependencies (using PHP 8.4 so platform_check passes)
+# Copy package manifests & install npm dependencies
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --prefer-offline || npm install
+
+# Copy source files needed for Vite build (including routes & actions)
+COPY resources/ resources/
+COPY public/ public/
+COPY vite.config.ts tsconfig.json components.json eslint.config.js ./
+
+# Compile production frontend assets into public/build
+ENV NODE_ENV=production
+RUN npm run build
+
+# ==============================================================================
+# Stage 2: Install Composer Dependencies
+# ==============================================================================
+FROM composer:2 AS composer_builder
+
+WORKDIR /app
+
 COPY composer.json composer.lock ./
+
 RUN composer install \
     --no-dev \
     --no-interaction \
@@ -29,25 +34,8 @@ RUN composer install \
     --optimize-autoloader \
     --no-scripts
 
-# Install npm dependencies
-COPY package.json package-lock.json ./
-RUN npm ci --no-audit --prefer-offline || npm install
-
-# Copy application files needed for artisan & Wayfinder route analysis
-COPY artisan ./
-COPY app/ app/
-COPY bootstrap/ bootstrap/
-COPY config/ config/
-COPY routes/ routes/
-COPY resources/ resources/
-COPY public/ public/
-COPY vite.config.ts tsconfig.json components.json eslint.config.js ./
-
-# Compile production frontend assets into public/build (Wayfinder executes php artisan wayfinder:generate on PHP 8.4)
-RUN npm run build
-
 # ==============================================================================
-# Stage 2: Production Runtime (PHP 8.4-FPM + Nginx + Supervisor)
+# Stage 3: Production Runtime (PHP 8.4-FPM + Nginx + Supervisor)
 # ==============================================================================
 FROM php:8.4-fpm-bookworm
 
@@ -105,13 +93,11 @@ COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 # Copy application source code
 COPY . /var/www/html
 
-# Copy vendor dependencies from builder
-COPY --from=frontend_builder /app/vendor /var/www/html/vendor
+# Copy vendor dependencies from composer_builder
+COPY --from=composer_builder /app/vendor /var/www/html/vendor
 
-# Copy compiled frontend assets and generated routes/actions from builder
-COPY --from=frontend_builder /app/public/build /var/www/html/public/build
-COPY --from=frontend_builder /app/resources/js/routes /var/www/html/resources/js/routes
-COPY --from=frontend_builder /app/resources/js/actions /var/www/html/resources/js/actions
+# Copy compiled frontend assets from node_builder
+COPY --from=node_builder /app/public/build /var/www/html/public/build
 
 # Dump optimized autoloader
 RUN composer dump-autoload --optimize --no-dev --classmap-authoritative
