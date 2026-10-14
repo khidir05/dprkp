@@ -1,7 +1,7 @@
 # ==============================================================================
 # Stage 1: Build Frontend Assets (Vite + React + Inertia + Tailwind CSS)
 # ==============================================================================
-FROM node:22-bookworm-slim AS node_builder
+FROM node:22-slim AS node_builder
 
 WORKDIR /app
 
@@ -40,7 +40,7 @@ RUN composer install \
 # ==============================================================================
 # Stage 3: Production Runtime (PHP 8.3-FPM + Nginx + Supervisor)
 # ==============================================================================
-FROM php:8.3-fpm-bookworm-slim
+FROM php:8.3-fpm-bookworm
 
 LABEL maintainer="Khidir Afwan Amlabar" \
       project="DPRKP DKI Jakarta"
