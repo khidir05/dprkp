@@ -372,6 +372,10 @@ class AppServiceProvider extends ServiceProvider
     {
         Date::use(CarbonImmutable::class);
 
+        if (app()->isProduction() || str_starts_with((string) config('app.url'), 'https://')) {
+            \Illuminate\Support\Facades\URL::forceScheme('https');
+        }
+
         DB::prohibitDestructiveCommands(
             app()->isProduction(),
         );
